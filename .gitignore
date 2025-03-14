@@ -26,3 +26,4 @@ xcshareddata/
 *.xcuserstate
 .vscode/settings.json
 build.txt
+dlls/

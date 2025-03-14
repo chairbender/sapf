@@ -84,7 +84,11 @@ you installed and check the "files" for a ".pc" file and note the path. Ensure t
   - search on whatever the compiler claims is "missing". Usually you'll find what dependency is supposed to provide that.
   - Find the msys2 page for the dependency (assuming you installed it already) and check where it installs the .h files. 
   - Look at the path of the .h files and update the code to point to it instead of the old one (using a windows ifdef)
+11. copy the needed dlls
+TODO: not sure how this works, atm the only way I can get it to run is by copying the exe into C:\msys64\mingw64\bin and running it there.
+If I copy the dlls manually then I get a bunch of missing symbol errors probably because that's not how its supposed to work.
 
+TODO: consider static compilation 
 
 TODO: 
 libedit dep isn't available for mingw64 directly via pacman. We can try
