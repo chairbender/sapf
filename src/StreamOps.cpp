@@ -5568,7 +5568,7 @@ static void deinterleave(int numChans, int numFrames, float* in, double** out)
 
 static const size_t gSessionTimeMaxLen = 256;
 char gSessionTime[gSessionTimeMaxLen];
-
+#define _POSIX_THREAD_SAFE_FUNCTIONS
 #include <time.h>
 
 static void setSessionTime()
@@ -5576,7 +5576,11 @@ static void setSessionTime()
 	time_t t;
 	tm tt;
 	time(&t);
+	#ifdef _WIN32
+	localtime_s(&tt, &t);
+	#else
 	localtime_r(&t, &tt);
+	#endif
 	snprintf(gSessionTime, gSessionTimeMaxLen, "%04d-%02d%02d-%02d%02d%02d",
 		tt.tm_year+1900, tt.tm_mon+1, tt.tm_mday, tt.tm_hour, tt.tm_min, tt.tm_sec);
 }

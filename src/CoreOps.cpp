@@ -1313,6 +1313,7 @@ static void zplug_(Thread& th, Prim* prim)
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////
 
+#ifndef _WIN32
 #pragma mark GLOB
 
 #include <glob.h>
@@ -1341,6 +1342,7 @@ static void glob_(Thread& th, Prim* prim)
 	
 	th.push(new List(a));
 }
+#endif
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////
 
@@ -1456,7 +1458,9 @@ void AddCoreOps()
 	DEF(debugstr, 1, "(x --> string) convert x to a debug string.");
 	DEFAM(strcat, ak, "(list separator --> string) convert elements of list to a string with separator string between each.");
 	DEF(strlines, 1, "(list --> string) convert elements of list to a newline separated string.");
+	#ifndef _WIN32
 	DEFAM(glob, k, "(pattern --> paths) return a list of file path names that match.");
+	#endif
 
 	vm.addBifHelp("\n*** sample rate ops ***");
 	DEFnoeach(sr, 0, 1, "(--> sampleRate) returns the sample rate. samples per second. ")

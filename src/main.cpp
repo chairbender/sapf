@@ -16,7 +16,9 @@
 
 #include "VM.hpp"
 #include <stdio.h>
+#if USE_LIBEDIT
 #include <histedit.h>
+#endif
 #include <algorithm>
 #include <sys/stat.h>
 #include "primes.hpp"

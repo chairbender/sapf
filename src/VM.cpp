@@ -231,6 +231,7 @@ static const char* promptString(EditLine *e)
 void Thread::getLine()
 {	
 	if (fromString) return;
+	#if USE_LIBEDIT
 	switch (parsingWhat) {
 		default: case parsingWords : el_set(el, EL_PROMPT, &prompt); break;
 		case parsingString : el_set(el, EL_PROMPT, &promptString); break;
@@ -252,6 +253,7 @@ void Thread::getLine()
 			fclose(logfile);
 		}
 	}
+	#endif
 }
 
 void Thread::logTimestamp(FILE* logfile)
@@ -259,10 +261,16 @@ void Thread::logTimestamp(FILE* logfile)
 	timeval tv;
 	gettimeofday(&tv, NULL);
 	if (previousTimeStamp == 0 || tv.tv_sec - previousTimeStamp > 3600) {
+		#ifdef _WIN32
+		// TODO: use std::chrono instead?
+		fprintf(logfile, ";;;;;;;; %s", tv.tv_sec);
+		#else
 		previousTimeStamp = tv.tv_sec;
 		char date[32];
 		ctime_r(&tv.tv_sec, date);
+		
 		fprintf(logfile, ";;;;;;;; %s", date);
+		#endif
 		fflush(logfile);
 	}
 }

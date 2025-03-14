@@ -25,8 +25,6 @@
 #include <sys/time.h>
 #include <atomic>
 
-#define USE_LIBEDIT 1
-
 #if USE_LIBEDIT
 #include <histedit.h>
 #endif
