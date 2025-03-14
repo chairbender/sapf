@@ -52,8 +52,8 @@ so we need to always force meson to build with clang (you'll see how to do that 
 
 If you're for some reason not on x86_64, you'll have to replace any of the below references to that architecture
 with your own! You can find and view info on packages on [msys2 packages](https://packages.msys2.org/queue) to see
-if the package exists for your architecture. But note for library dependencies,
-you'll need to specifically install the "-clang" version of them since we're using clang to compile this project.
+if the package exists for your architecture. Note these packages often also have "-clang" versions, but AFAICT we
+DON'T want to install those as they end up in a location that isn't found by default for this toolchain.
 
 1. Install [msys2](https://www.msys2.org/). Make sure to keep track of where you installed it as this will be where your
 "root directory" is for your msys2 / mingw64 shells. Files in here can be accessed in Windows just like normal, or accessed in the 
@@ -68,13 +68,6 @@ mix them).
     ```
 5. Open mingw64 shell and do the rest of the commands there (not sure if you actually need to run them in mingw64 but that's what I did)
 6. `pacman -S mingw-w64-x86_64-meson mingw-w64-clang-x86_64-libsndfile mingw-w64-clang-x86_64-fftw mingw-w64-clang-x86_64-rtaudio`
-7. Now we've installed the deps - they are somewhere in our system - but meson doesn't actually know where to find all of them.
-Meson uses "pkg-config" to resolve dependencies, so we need to make sure our dependencies can be found using this system.
-Meson (via pkgconfig) looks for `.pc` files under the `$PKG_CONFIG_PATH` env var. Some of the deps are already in that path, but not all:
-7. Edit `~/.bash_profile` (i.e. `(msys-install-dir)/home/(username)/.bash_profile`) (create if not exits) and add
-`export PKG_CONFIG_PATH="/clang64/lib/pkgconfig:$PKG_CONFIG_PATH"`
-7. `source ~/.bash_profile` or restart mingw64 shell.
-7. Now we hae to build libedit from source because it's not provided for mingw64.
 7. Now we can try to build. We need to always pass --native-file which forces meson to use clang.
 Still in the MinGW64 shell, navigate to the root directory of this repo.
 TODO: Not sure you need to pass it to compile or just setup.
@@ -128,6 +121,7 @@ https://stackoverflow.com/questions/16647819/timegm-cross-platform
 TODO: apparently for the time stuff we can actually get it back using a define?
 see https://stackoverflow.com/questions/18551409/localtime-r-support-on-mingw
 
+
 isascii/toascii
 basically it wasn't meant to be an ifdef in THIS lib, but it IS an ifdef due to something in mingw. So we need to substitute it
 
@@ -142,3 +136,9 @@ VSCode setup
 https://stackoverflow.com/questions/49209996/vs-code-mingw-intellisence-not-working-for-c
 https://code.visualstudio.com/docs/cpp/customize-default-settings-cpp
 
+Linker issues
+rtaudio
+https://stackoverflow.com/questions/35130096/c-undefined-reference-to-defined-constant
+
+
+TODO: not sure if host_machine section needed in clang.ini
