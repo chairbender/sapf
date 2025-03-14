@@ -24,3 +24,4 @@ xcshareddata/
 *.xccheckout
 *.moved-aside
 *.xcuserstate
+vcpkg_installed/

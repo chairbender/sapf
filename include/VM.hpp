@@ -22,7 +22,13 @@
 #include "rgen.hpp"
 #include <climits>
 #include <vector>
+
+#ifdef _WIN32
+#include "time.hpp"
+#else
 #include <sys/time.h>
+#endif
+
 #include <atomic>
 
 #define USE_LIBEDIT 1

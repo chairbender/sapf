@@ -39,11 +39,33 @@ sources = [
   'src/VM.cpp',
 ]
 deps = []
-cpp_args = ['-std=c++17']
+
+if host_machine.system() == 'windows'
+  cpp_args = ['/std:c++17']
+else
+  cpp_args = ['-std=c++17']
+endif
+
 link_args = []
 
 # libedit
-deps += dependency('libedit', required: true)
+# on windows, resolve to manually-compiled libedit
+# TODO: change this to work in container
+if host_machine.system() == 'windows'
+    deps += declare_dependency(
+        include_directories: include_directories('C:/Program Files/libedit/include'),
+        link_args: ['-LC:/Program Files/libedit/lib', '-ledit']
+    )
+else
+  deps += dependency('libedit', required: true)
+endif
+
+if host_machine.system() == 'windows'
+  deps += declare_dependency(
+      include_directories: include_directories('C:/Programming/vcpkg/packages/pthreads_x64-windows/include'),
+      link_args: ['-LC:/Programming/vcpkg/packages/pthreads_x64-windows/lib', '-ledit']
+  )
+endif
 
 if get_option('asan')
   cpp_args += ['-fsanitize=address', '-O1', '-fno-omit-frame-pointer', '-g']
@@ -53,7 +75,14 @@ endif
 if get_option('accelerate')
   add_project_arguments('-DSAPF_ACCELERATE', language: 'cpp')
 else
-  deps += dependency('fftw3', required: true, version: '>=3')
+  if host_machine.system() == 'windows'
+      deps += declare_dependency(
+          include_directories: include_directories('C:/Programming/vcpkg/packages/fftw3_x64-windows/include'),
+          link_args: ['-LC:/Programming/vcpkg/packages/fftw3_x64-windows/lib', '-ledit']
+      )
+  else
+    deps += dependency('fftw3', required: true, version: '>=3')
+  endif
 endif
 
 if get_option('apple_lock')
@@ -63,12 +92,30 @@ endif
 if get_option('audiotoolbox')
   add_project_arguments('-DSAPF_AUDIOTOOLBOX', language: 'cpp')
 else
-  deps += dependency('rtaudio', required: true, version: '>=5.2')
+  
+  if host_machine.system() == 'windows'
+      deps += declare_dependency(
+          include_directories: include_directories('C:/Programming/vcpkg/packages/rtaudio_x64-windows/include'),
+          link_args: ['-LC:/Programming/vcpkg/packages/rtaudio_x64-windows/lib', '-ledit']
+      )
+  else
+    deps += dependency('rtaudio', required: true, version: '>=5.2')
+  endif
+
+
   if not cpp.has_header('RtAudio.h') and cpp.has_header('rtaudio/RtAudio.h')
     add_project_arguments('-DSAPF_RTAUDIO_H=<rtaudio/RtAudio.h>', language: 'cpp')
   endif
 
-  deps += dependency('sndfile', required: true)
+  if host_machine.system() == 'windows'
+      deps += declare_dependency(
+          include_directories: include_directories('C:/Programming/vcpkg/packages/libsndfile_x64-windows/include'),
+          link_args: ['-LC:/Programming/vcpkg/packages/libsndfile_x64-windows/lib', '-ledit']
+      )
+  else
+    deps += dependency('sndfile', required: true)
+  endif
+
 endif
 
 if get_option('carbon')

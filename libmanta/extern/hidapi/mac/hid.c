@@ -28,7 +28,12 @@
 #include <wchar.h>
 #include <locale.h>
 #include <pthread.h>
+#ifdef _WIN32
+#include "time.h"
+#else
 #include <sys/time.h>
+#endif
+
 #include <unistd.h>
 
 #include "hidapi.h"

@@ -1,0 +1,8 @@
+{
+    "dependencies": [
+      "libsndfile",
+      "fftw3",
+      "rtaudio",
+      "pthreads"
+    ]
+  }
