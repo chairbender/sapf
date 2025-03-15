@@ -232,29 +232,24 @@ static const char* promptString()
 
 	/* Read a string, and return a pointer to it.
 	Returns NULL on EOF. */
-	// TODO: instead of copying and allocing here, modify the logic on the CONSUMING end to account for no \n on win32
 	char *rl_gets()
 	{
+		/* If the buffer has already been allocated,
+		   return the memory to the free pool. */
+		if (line_read)
+		{
+			free(line_read);
+			line_read = (char *)NULL;
+		}
+
 		/* Get a line from the user. */
 		line_read = readline(rl_prompt);
 
-
 		/* If the line has any text in it,
-			save it on the history. */
+		   save it on the history. */
 		if (line_read && *line_read)
 			add_history(line_read);
 
-		// Unlike libedit, readline omits the newline, but I think we don't
-		// want that to go in the history - only in the return value...
-		// Allocate space for input + newline + null terminator
-		size_t len = strlen(line_read);
-		char* modified = (char*)malloc(len + 2); // +1 for '\n', +1 for '\0'
-		strcpy(modified, line_read);
-		modified[len] = '\n'; // Append newline
-		modified[len + 1] = '\0'; // Null-terminate
-		free(line_read);
-		line_read = modified;
-		free(modified);
 		return (line_read);
 	}
 #endif
@@ -360,6 +355,22 @@ char Thread::getc() {
 	return 0; // never gets here, but compiler too dumb to figure this out.
 }
 
+#ifdef _WIN32
+	// handle \r\n newlines the way the el-based code is expecting.
+	// since readline removes the final \n, we need to manually add our own
+	int return_func(int cnt, int key) {
+		rl_insert(cnt, '\r');
+		return rl_newline(cnt + 1, key);
+	}
+
+	// when pasting from LF docs we get a \n
+	int newline_func(int cnt, int key) {
+		rl_insert(cnt, '\r');
+		rl_insert(cnt + 1, '\n');
+		return rl_newline(cnt + 2, key);
+	}
+#endif
+
 void Thread::repl(FILE* infile, const char* inLogfilename)
 {
 	Thread& th = *this;
@@ -394,6 +405,9 @@ void Thread::repl(FILE* infile, const char* inLogfilename)
 #else
 	// disable the default tab autocomplete
 	rl_bind_key ('\t', rl_insert);
+	// handle newlines the way the el-based code is expecting
+	rl_bind_key ('\n', newline_func);
+	rl_bind_key ('\r', return_func);
 	// TODO: Could install custom completers for autocomplete
 	rl_set_prompt(prompt());
 	// it should default to "emacs" mode already
