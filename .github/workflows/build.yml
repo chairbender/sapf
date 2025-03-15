@@ -6,7 +6,7 @@ on:
   pull_request:
     branches: [ "main" ]
     
-    
+
 jobs:
   msys2-ucrt64:
     runs-on: windows-latest
@@ -19,6 +19,7 @@ jobs:
         with:
           msystem: UCRT64
           update: true
+          # TODO: this is probably overkill just for CI - try to narrow it down
           install: >-
             base-devel 
             mingw-w64-ucrt-x86_64-toolchain
@@ -30,9 +31,10 @@ jobs:
             mingw-w64-ucrt-x86_64-rtaudio
             mingw-w64-ucrt-x86_64-readline
       - name: CI-Build
+        # TODO: how to fail if build fails
         run: |
           echo 'Running in MSYS2!'
-          meson setup -native-file clang.ini build
+          meson setup --native-file clang.ini build
           meson compile -C build
       - name: Save Build Log Artifact
         if: ${{ always() }}
