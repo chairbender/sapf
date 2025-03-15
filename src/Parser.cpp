@@ -54,9 +54,17 @@ static bool skipSpace(Thread& th)
 		if (c == ';') {
 			c = th.getc();
 			while (c && c != '\n') { c = th.getc(); }
-			if (c == 0) { th.unget(1); return true; }
+			#ifdef _WIN32
+				if (c == 0) { return true; }
+			#else
+				if (c == 0) { th.unget(1); return true; }
+			#endif
 		}
-		if (c == 0) { th.unget(1); return true; }
+		#ifdef _WIN32
+			if (c == 0) { return true; }
+		#else
+			if (c == 0) { th.unget(1); return true; }
+		#endif
 		bool skip = isspace(c) || iscntrl(c);
 		if (!skip) { th.unget(1); break; }
 	}
@@ -89,7 +97,13 @@ static bool parseHexNumber(Thread& th, P<Code>& code)
 		th.unget(start);
 		return false;
 	} else {
-		th.unget(1);
+		#ifdef _WIN32
+			// Put the character back for future parsing, unless we're at the end.
+			// This is only needed on win32 because the read line doesn't include \n
+			if (c != 0) th.unget(1);
+		#else
+			th.unget(1);
+		#endif
 	}
 	
 	code->add(opPushImmediate, z);
@@ -573,7 +587,14 @@ bool parseSymbol(Thread& th, P<String>& result)
 	while(!endOfWord(c)) {
 		c = th.getc();
 	}
-	th.unget(1);
+	#ifdef _WIN32
+		// Put the character back for future parsing, unless we're at the end.
+		// This is only needed on win32 because the read line doesn't include \n,
+		// so ungetting in that case would put back a character we already parsed
+		if (c != 0) th.unget(1);
+	#else
+		th.unget(1);
+	#endif
 
 	size_t len = th.curline() - start;
 	if (len == 0) return false;

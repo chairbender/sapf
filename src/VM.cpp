@@ -230,31 +230,27 @@ static const char* promptString()
 	/* A static variable for holding the line. */
 	static char *line_read = (char *)NULL;
 
-	/* Read a string, and return a pointer to it.
+	/* Read a string, and return a pointer to it. Unlike libedit, the resulting string does NOT
+	have the newline character.
 	Returns NULL on EOF. */
-	// TODO: instead of copying and allocing here, modify the logic on the CONSUMING end to account for no \n on win32
 	char *rl_gets()
 	{
+		/* If the buffer has already been allocated,
+		   return the memory to the free pool. */
+		if (line_read)
+		{
+			free(line_read);
+			line_read = (char *)NULL;
+		}
+
 		/* Get a line from the user. */
 		line_read = readline(rl_prompt);
 
-
 		/* If the line has any text in it,
-			save it on the history. */
+		   save it on the history. */
 		if (line_read && *line_read)
 			add_history(line_read);
 
-		// Unlike libedit, readline omits the newline, but I think we don't
-		// want that to go in the history - only in the return value...
-		// Allocate space for input + newline + null terminator
-		size_t len = strlen(line_read);
-		char* modified = (char*)malloc(len + 2); // +1 for '\n', +1 for '\0'
-		strcpy(modified, line_read);
-		modified[len] = '\n'; // Append newline
-		modified[len + 1] = '\0'; // Null-terminate
-		free(line_read);
-		line_read = modified;
-		free(modified);
 		return (line_read);
 	}
 #endif
