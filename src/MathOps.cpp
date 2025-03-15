@@ -808,10 +808,10 @@ DEFINE_UNOP_FLOATVV(abs, fabs(a), vvfabs)
 
 DEFINE_UNOP_INT(tolower, tolower((int)a))
 DEFINE_UNOP_INT(toupper, toupper((int)a))
+// under mingw64, "toascii" is actually a #define for __toascii, so the macro doesn't do what's desired 
 #ifdef _WIN32
 #pragma push_macro("toascii")
 #undef toascii
-// TODO: Not sure if this causes linker issue?
 DEFINE_UNOP_BOOL_INT(toascii, __toascii((int)a))
 #pragma pop_macro("toascii")
 #else

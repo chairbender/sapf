@@ -27,3 +27,4 @@ xcshareddata/
 .vscode/settings.json
 build.txt
 dlls/
+c_cpp_properties.json

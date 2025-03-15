@@ -67,7 +67,7 @@ mix them).
     pacman -S mingw-w64-x86_64-clang
     ```
 5. Open mingw64 shell and do the rest of the commands there (not sure if you actually need to run them in mingw64 but that's what I did)
-6. `pacman -S mingw-w64-x86_64-meson mingw-w64-clang-x86_64-libsndfile mingw-w64-clang-x86_64-fftw mingw-w64-clang-x86_64-rtaudio`
+6. `pacman -S mingw-w64-x86_64-meson mingw-w64-x86_64-libsndfile mingw-w64-x86_64-fftw mingw-w64-x86_64-rtaudio mingw-w64-x86_64-readline`
 7. Now we can try to build. We need to always pass --native-file which forces meson to use clang.
 Still in the MinGW64 shell, navigate to the root directory of this repo.
 TODO: Not sure you need to pass it to compile or just setup.
@@ -85,8 +85,15 @@ you installed and check the "files" for a ".pc" file and note the path. Ensure t
   - Find the msys2 page for the dependency (assuming you installed it already) and check where it installs the .h files. 
   - Look at the path of the .h files and update the code to point to it instead of the old one (using a windows ifdef)
 11. copy the needed dlls
+
+VSCODE Setup
+Copy and modify .vscode/c_cpp_properties.example.json to c_cpp_properties.json
+
 TODO: not sure how this works, atm the only way I can get it to run is by copying the exe into C:\msys64\mingw64\bin and running it there.
 If I copy the dlls manually then I get a bunch of missing symbol errors probably because that's not how its supposed to work.
+
+TODO: relocate this stuff to PKM.
+
 
 TODO: consider static compilation 
 

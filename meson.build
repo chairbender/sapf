@@ -47,7 +47,7 @@ if host_machine.system() == 'windows'
     # TODO: Not sure if we need both or if these are valid substitutes
     deps += dependency('readline', required: true)
     deps += dependency('history', required: true)
-    cpp_args += ['-DUSE_LIBEDIT=0']
+    cpp_args += ['-DUSE_LIBEDIT=0', '-D_POSIX_THREAD_SAFE_FUNCTIONS']
     # TODO: needed?
     #link_args += ['-lrtaudio']
 else

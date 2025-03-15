@@ -201,35 +201,76 @@ VM::~VM()
 {
 }
 
-#if USE_LIBEDIT
-static const char* prompt(EditLine *e) 
+static const char* prompt() 
 {
   return "sapf> ";
 }
-static const char* promptParen(EditLine *e) 
+static const char* promptParen() 
 {
   return "(sapf> ";
 }
-static const char* promptSquareBracket(EditLine *e) 
+static const char* promptSquareBracket() 
 {
   return "[sapf> ";
 }
-static const char* promptCurlyBracket(EditLine *e) 
+static const char* promptCurlyBracket() 
 {
   return "{sapf> ";
 }
-static const char* promptLambda(EditLine *e) 
+static const char* promptLambda() 
 {
   return "\\sapf> ";
 }
-static const char* promptString(EditLine *e) 
+static const char* promptString() 
 {
   return "\"sapf> ";
+}
+
+#if !USE_LIBEDIT
+/* A static variable for holding the line. */
+static char *line_read = (char *)NULL;
+
+/* Read a string, and return a pointer to it.
+   Returns NULL on EOF. */
+   // TODO: isn't there a better way to do this?
+char *rl_gets()
+{
+	/* If the buffer has already been allocated,
+		return the memory to the free pool. */
+	if (line_read)
+	{
+		free(line_read);
+		line_read = (char *)NULL;
+	}
+
+	/* Get a line from the user. */
+	line_read = readline(rl_prompt);
+
+
+	/* If the line has any text in it,
+		save it on the history. */
+	if (line_read && *line_read)
+		add_history(line_read);
+
+	// Unlike libedit, readline omits the newline, but I think we don't
+	// want that to go in the history - only in the return value...
+	// Allocate space for input + newline + null terminator
+	// TODO: this can't be the best way to do this
+	size_t len = strlen(line_read);
+	char* modified = (char*)malloc(len + 2); // +1 for '\n', +1 for '\0'
+	strcpy(modified, line_read);
+	modified[len] = '\n'; // Append newline
+	modified[len + 1] = '\0'; // Null-terminate
+	free(line_read);
+	line_read = modified;
+	free(modified);
+	return (line_read);
 }
 #endif
 
 void Thread::getLine()
 {	
+	post("getting line\n");
 	if (fromString) return;
 	#if USE_LIBEDIT
 	switch (parsingWhat) {
@@ -253,24 +294,44 @@ void Thread::getLine()
 			fclose(logfile);
 		}
 	}
+	#else
+	switch (parsingWhat) {
+		default: case parsingWords : rl_set_prompt(prompt()); break;
+		case parsingString : rl_set_prompt(promptString()); break;
+		case parsingParens : rl_set_prompt(promptParen()); break;
+		case parsingLambda : rl_set_prompt(promptLambda()); break;
+		case parsingArray : rl_set_prompt(promptSquareBracket()); break;
+		case parsingEnvir : rl_set_prompt(promptCurlyBracket()); break;
+	}
+	line = rl_gets();
+	linelen = strlen(line);
+	linepos = 0;
+	printf("got line length %d: %s", linelen, line);
+	if (strncmp(line, "quit", 4)==0 || strncmp(line, "..", 2)==0) { line = NULL; throw errUserQuit; }
+	if (line && linelen) {
+		write_history(historyfilename);
+		if (logfilename) {
+			FILE* logfile = fopen(logfilename, "a");
+			logTimestamp(logfile);
+			fwrite(line, 1, strlen(line), logfile);
+			fclose(logfile);
+		}
+
+	}
 	#endif
 }
 
 void Thread::logTimestamp(FILE* logfile)
 {
 	timeval tv;
+	time_t t;
+	time(&t);
 	gettimeofday(&tv, NULL);
 	if (previousTimeStamp == 0 || tv.tv_sec - previousTimeStamp > 3600) {
-		#ifdef _WIN32
-		// TODO: use std::chrono instead?
-		fprintf(logfile, ";;;;;;;; %s", tv.tv_sec);
-		#else
 		previousTimeStamp = tv.tv_sec;
 		char date[32];
-		ctime_r(&tv.tv_sec, date);
-		
+		ctime_r(&t, date);
 		fprintf(logfile, ";;;;;;;; %s", date);
-		#endif
 		fflush(logfile);
 	}
 }
@@ -334,6 +395,24 @@ void Thread::repl(FILE* infile, const char* inLogfilename)
 	history(myhistory, &ev, H_LOAD, historyfilename);
 	history(myhistory, &ev, H_SETUNIQUE, 1);
 	el_set(el, EL_HIST, history, myhistory);
+#else
+	// disable the default tab autocomplete
+	rl_bind_key ('\t', rl_insert);
+	// TODO: Could install custom completers
+	rl_set_prompt(prompt());
+	// it should default to "emacs" mode already
+
+	using_history();
+	const char* envHistoryFileName = getenv("SAPF_HISTORY");
+	if (envHistoryFileName) {
+		snprintf(historyfilename, PATH_MAX, "%s", envHistoryFileName);
+	} else {
+		const char* homeDir = getenv("HOME");
+		snprintf(historyfilename, PATH_MAX, "%s/sapf-history.txt", homeDir);
+	}
+	stifle_history(800);
+	read_history(historyfilename);
+	// duplicate entries should be cleared by default (I think this is the same as H_SETUNIQUE?)
 #endif
 	
 	fflush(infile);
@@ -395,6 +474,8 @@ void Thread::repl(FILE* infile, const char* inLogfilename)
 	history(myhistory, &ev, H_SAVE, historyfilename);
 	history_end(myhistory);
 	el_end(el);
+#else
+	write_history(historyfilename);
 #endif
 }
 
