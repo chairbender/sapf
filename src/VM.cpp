@@ -308,6 +308,7 @@ void Thread::getLine()
 	linepos = 0;
 	if (strncmp(line, "quit", 4)==0 || strncmp(line, "..", 2)==0) { line = NULL; throw errUserQuit; }
 	if (line && linelen) {
+		// TODO: seemingly not working (save / load)
 		write_history(historyfilename);
 		if (logfilename) {
 			FILE* logfile = fopen(logfilename, "a");
