@@ -86,6 +86,9 @@ you installed and check the "files" for a ".pc" file and note the path. Ensure t
   - Look at the path of the .h files and update the code to point to it instead of the old one (using a windows ifdef)
 11. copy the needed dlls
 
+12. Test if its all working with a simple command
+`15 .0 sinosc 200 * 300 + .0 sinosc .1 * play`
+
 VSCODE Setup
 Copy and modify .vscode/c_cpp_properties.example.json to c_cpp_properties.json
 

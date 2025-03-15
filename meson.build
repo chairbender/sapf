@@ -121,6 +121,9 @@ if get_option('manta')
   add_project_arguments('-DSAPF_MANTA', language: 'cpp')
 endif
 
+#TODO: needed?
+add_project_arguments('-debug',  language : 'cpp')
+
 executable(
   'sapf',
   sources,

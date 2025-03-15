@@ -25,6 +25,8 @@ xcshareddata/
 *.moved-aside
 *.xcuserstate
 .vscode/settings.json
+.vscode/tasks.json
 build.txt
 dlls/
 c_cpp_properties.json
+.vscode/launch.json

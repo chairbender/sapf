@@ -232,16 +232,16 @@ static char *line_read = (char *)NULL;
 
 /* Read a string, and return a pointer to it.
    Returns NULL on EOF. */
-   // TODO: isn't there a better way to do this?
+   // TODO: instead of copying and allocing here, modify the logic on the CONSUMING end to account for no \n on win32
 char *rl_gets()
 {
 	/* If the buffer has already been allocated,
 		return the memory to the free pool. */
-	if (line_read)
-	{
-		free(line_read);
-		line_read = (char *)NULL;
-	}
+	// if (line_read)
+	// {
+	// 	free(line_read);
+	// 	line_read = (char *)NULL;
+	// }
 
 	/* Get a line from the user. */
 	line_read = readline(rl_prompt);
@@ -306,7 +306,6 @@ void Thread::getLine()
 	line = rl_gets();
 	linelen = strlen(line);
 	linepos = 0;
-	printf("got line length %d: %s", linelen, line);
 	if (strncmp(line, "quit", 4)==0 || strncmp(line, "..", 2)==0) { line = NULL; throw errUserQuit; }
 	if (line && linelen) {
 		write_history(historyfilename);

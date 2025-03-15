@@ -1,0 +1,4 @@
+{
+    "C_Cpp.default.compileCommands": "c:\\msys64\\home\\kwhip\\sapf\\build/compile_commands.json",
+    "C_Cpp.default.configurationProvider": "mesonbuild.mesonbuild"
+}
