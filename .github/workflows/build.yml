@@ -31,7 +31,6 @@ jobs:
             mingw-w64-ucrt-x86_64-rtaudio
             mingw-w64-ucrt-x86_64-readline
       - name: CI-Build
-        # TODO: how to fail if build fails
         run: |
           echo 'Running in MSYS2!'
           meson setup --native-file clang.ini build
@@ -41,7 +40,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: meson-build-log-${{ runner.os }}.txt
-          path: build/meson-logs/meson-log.tx
+          path: build/meson-logs/meson-log.txt
   # build:
   #   strategy:
   #     fail-fast: false
