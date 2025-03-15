@@ -30,25 +30,11 @@ for installing dependencies, you can refer to the CI scripts in this repo:
 
 ## Windows
 
-Keep in mind this was written by someone fairly new to this toolchain and hence there
-are things here that may be wrong or unnecessary and this is written with more for a beginner-oriented
-perspective, partly for my own documentation and partly for others in a similar situation. Feel free to submit a PR and improve this if you know better!
+(I'm new to this toolchain so some things may be wrong)
 
-Windows support is achieved by building via msys2 + MinGW64 as opposed to building natively on Windows (probably possible but probably much more annoying).
+Windows support is achieved by building via [msys2](https://www.msys2.org/) (using mingw-w64-ucrt6) as opposed to building natively on Windows (probably possible but probably much more annoying).
 
-For the unfamiliar, msys2 is an app you can run that gives you a shell (with the root directory based in wherever you installed it).
-Within this shell, Linux-based stuff actually works (with caveats). But we want to run the project on Windows. That's why we
-use msys2 to then install MinGW64, which is itself ANOTHER shell you can open (it installs like a normal app just like msys2, just click it to open
-a shell). When we compile the project via MinGW64, it produces an executable that can theoretically run on Windows (provided we've either
-statically comipled in the needed libraries or provided them as DLLs alongside the .exe).
-
-This project uses meson as the build tool. But meson doesn't actually automatically fetch dependencies, nor does it
-actually perform the compilation. We need to install the dependencies via pacman (each dependency is basically
-a collection of .lib and .h files), ensure meson "sees" them, and also tell meson to compile using clang (since by default it
-uses gcc).
-
-I believe the project requires clang so the instructions use that compiler. Note that clang installs gcc as a dependency,
-so we need to always force meson to build with clang (you'll see how to do that below).
+I believe the project specifically requires clang.
 
 If you're for some reason not on x86_64, you'll have to replace any of the below references to that architecture
 with your own! You can find and view info on packages on [msys2 packages](https://packages.msys2.org/queue) to see
@@ -56,103 +42,181 @@ if the package exists for your architecture. Note these packages often also have
 DON'T want to install those as they end up in a location that isn't found by default for this toolchain.
 
 1. Install [msys2](https://www.msys2.org/). Make sure to keep track of where you installed it as this will be where your
-"root directory" is for your msys2 / mingw64 shells. Files in here can be accessed in Windows just like normal, or accessed in the 
-shell (so for example you can edit in VSCode and then compile in the mingw64 shell), just
-be careful about not messing up the line endings when you edit on different OSes (different OSes use different line ending chars and it creates problems if you
-mix them).
-2. If you haven't yet, clone or copy this repo somewhere inside the msys2 install. For example within the msys2 shell you could install git via
+"root directory" is for your msys2 / mingw64 shells. For this guide we will assume the default of `C:\msys64`
+1. If you haven't yet, clone or copy this repo somewhere inside the msys2 install. For example within the msys2 shell you could install git via
 `pacman -S git` and then git clone this repo into your "home" folder.
-3. Open msys2 shell and install mingw64. PROTIP: Shift+Ins to paste, Ctrl+Ins to copy!
-4.  ```shell
-    pacman -S mingw-w64-x86_64-clang
-    ```
-5. Open mingw64 shell and do the rest of the commands there (not sure if you actually need to run them in mingw64 but that's what I did)
-6. `pacman -S mingw-w64-x86_64-meson mingw-w64-x86_64-libsndfile mingw-w64-x86_64-fftw mingw-w64-x86_64-rtaudio mingw-w64-x86_64-readline`
-7. Now we can try to build. We need to always pass --native-file which forces meson to use clang.
-Still in the MinGW64 shell, navigate to the root directory of this repo.
-TODO: Not sure you need to pass it to compile or just setup.
-8. If you get "meson not found" or something like that, just close and reopen the mingw64 shell.
-8.  ```shell
-    meson setup --native-file clang.ini build 
+1. Open a msys2 (ucrt) shell and install some needed development dependencies
+   ```shell
+   # press ENTER when prompted to choose "all"
+   pacman -S --needed base-devel mingw-w64-ucrt-x86_64-toolchain
+   pacman -S \
+    mingw-w64-ucrt-x86_64-meson \
+    mingw-w64-ucrt-x86_64-clang \
+    mingw-w64-ucrt-x86_64-fftw \
+    mingw-w64-ucrt-x86_64-libsndfile \
+    mingw-w64-ucrt-x86_64-pkgconf \
+    mingw-w64-ucrt-x86_64-rtaudio \
+    mingw-w64-ucrt-x86_64-readline
+   ```
+1. Close and reopen the shell to ensure it loads everything you just installed. 
+1. Now we can try to build in the msys2 (ucrt) shell. We need to always pass our `--native-file` which forces meson to use clang.
+Navigate to the root directory of this repo.
+1.  ```shell
+    # remove --buildtype debug to build without debug symbols (I think?)
+    meson setup --buildtype debug --native-file clang.ini build 
     meson compile -C build
     ```
-9. If you get "package blah not found", it means your PKG_CONFIG_PATH doesn't contain a "blah.pc" file. You can
-confirm if pkg-config sees the lib via `pkg-config --modversion blah` (replacing blah with the name of the package). You
-should see a version number printed. If not, you have to ensure you found the package. Check the msys2 page for the packages
-you installed and check the "files" for a ".pc" file and note the path. Ensure that path is part of your PKG_CONFIG_PATH (`echo $PKG_CONFIG_PATH`).
-10. When you actually compile, if you see errors, you'll have to search and resolve them. Some tips:
-  - search on whatever the compiler claims is "missing". Usually you'll find what dependency is supposed to provide that.
-  - Find the msys2 page for the dependency (assuming you installed it already) and check where it installs the .h files. 
-  - Look at the path of the .h files and update the code to point to it instead of the old one (using a windows ifdef)
-11. copy the needed dlls
-
-12. Test if its all working with a simple command
+1. You should see `sapf.exe` is created under the `${workspaceFolder}/build` directory.
+1. You need all the required DLLs in order to run it via Windows. Go to your msys2 folder `C:\msys64\ucrt64\bin`
+and copy all of the dlls that look like `lib*.dll` (i.e. libreadline8.dll, libogg-0.dll, etc...). This is
+more than needed but I'm not sure the exact subset of dlls needed yet.
+1. Now you can run the exe directly by clicking or via your preferred command prompt.
+1. Test if its all working with a simple command (you should hear audio)
 `15 .0 sinosc 200 * 300 + .0 sinosc .1 * play`
+1. If you didn't hear anything check if ASIO4ALL launched (in the taskbar icons) and
+open it up and enable your preferred output device. Then restart sapf. 
+    - We want to make it possible to select an audio device, which is kind of necessary for Windows but not so much for other systems.
 
-VSCODE Setup
-Copy and modify .vscode/c_cpp_properties.example.json to c_cpp_properties.json
+### Windows VSCode Development Setup
+Since it's not exactly straightforward to get everything working nicely in VSCode under Windows, here's 
+some guidance.
 
-TODO: not sure how this works, atm the only way I can get it to run is by copying the exe into C:\msys64\mingw64\bin and running it there.
-If I copy the dlls manually then I get a bunch of missing symbol errors probably because that's not how its supposed to work.
+The trick to making it work is to make sure VSCode is using the ucrt64 binaries for the development toolchain,
+NOT anything installed natively to Windows.
 
-TODO: relocate this stuff to PKM.
-
-
-TODO: consider static compilation 
-
-TODO: 
-libedit dep isn't available for mingw64 directly via pacman. We can try
-- readline mingw-w64-clang-x86_64-readline (also no editline struct - so doesn't have what we need)
-- wineditline (doesn't seem to have all the needed stuff - no EditLine type)
-- compile from source under mingw641
-
-I think we need to include a different header, but not sure if we include wineditline's header or readline's headers
-
-Compile from source
-git clone git@github.com:cdesjardins/libedit.git
-cd libedit
-./configure
-make
-make install
-(note where it installed)
-
-Can't - termios.h not supported in minGW.
-
-So instead, we need to actually port this stuff to NOT use editlib, and we need to use something else instead.
-
-Also, glob.h is not supported - so we need to work around that: 
-https://github.com/msys2/MSYS2-packages/issues/269
-https://stackoverflow.com/questions/15052998/what-to-substitute-for-glob-t-and-glob-on-port-to-windows
-It's a posix thing so it's just not there, we need to use a cross-platform alternative or specific mingw feature. Or disable 
-that functionality for now
-
-ctime_r
-https://stackoverflow.com/questions/17085603/time-functions-in-mingw
-https://stackoverflow.com/questions/19048012/implement-thread-safe-ctime-function
-https://stackoverflow.com/questions/41621922/support-gmtime-r-timegm-functions-on-windows-mingw32
-https://stackoverflow.com/questions/16647819/timegm-cross-platform
-
-TODO: apparently for the time stuff we can actually get it back using a define?
-see https://stackoverflow.com/questions/18551409/localtime-r-support-on-mingw
+1. Install C/C++ extensions for VSCode.
+1. Install Meson extension for VSCode.
+1. In the settings for Meson, set Meson build path to `C:\msys64\ucrt64\bin\meson` and
+set the Build folder to `build`.
+1. Add your `C:\msys64\ucrt\bin` folder to your Path (via Environment Variables).
+1. Open a windows terminal and make sure that `gcc --version` and `g++ --version` and `gdb --version` return
+a version string. You can also confirm with `where gcc` that it's using the binary within msys2.
+1. Before opening the folder in vscode, create a `.vscode` subdolder and populate it with some files. See the below "Config files" section for some example config files. Tweak the paths to match your own system.
+1. Open a cpp file to make sure the extensions activate.
+1. You should now have intellisense working (you should be able to "Go to definition" and "find references, etc...").
+1. You can now build using the Meson build task instead of msys2 shell if you prefer.
+1. You can debug by opening up main.cpp and selecting the "Attach (sapf)" configuration (bottom left), manually
+running sapf.exe, and then presing F5 and attaching to the sapf.exe process. (Currently haven't figured out
+how to get the "launch" version working - it runs but the text is garbled - likely an encoding issue).
+    - IDK why but it seems like you have to actually have main.cpp open in order for it to succeed in attaching.
 
 
-isascii/toascii
-basically it wasn't meant to be an ifdef in THIS lib, but it IS an ifdef due to something in mingw. So we need to substitute it
 
-When we disable libedit via USE_LIBEDIT, it gets less errors but we still need to solve those
+#### Config files
+Example `.vscode/c_cpp_properties.json`
+```json
+{
+    "configurations": [
+        {
+            "name": "ucrt64",
+            "includePath": [
+                "C:/msys64/ucrt64/include/**",
+                "${workspaceFolder}/**"
+            ],
+            "defines": [
+                "_DEBUG",
+                "UNICODE",
+                "_UNICODE"
+            ],
+            "compilerPath": "C:/msys64/ucrt64/bin/clang++.exe",
+            "windowsSdkVersion": "10.0.22621.0",
+            "cStandard": "c17",
+            "cppStandard": "c++17",
+            "intelliSenseMode": "windows-clang-x64",
+            "configurationProvider": "mesonbuild.mesonbuild"
+        }
+    ],
+    "version": 4
+}
+```
 
-TODO: remove wineditline / readline unless I will use them as the alternatives.
-Port to linenoise-ng instead.
+Example `.vscode/launch.json`
+```json
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "(gdb) Attach",
+            "type": "cppdbg",
+            "request": "attach",
+            "program": "${workspaceRoot}/build/sapf.exe",
+            "MIMode": "gdb",
+            "miDebuggerPath": "C:\\msys64\\ucrt64\\bin\\gdb.exe",
+            "setupCommands": [
+                {
+                    "description": "Enable pretty-printing for gdb",
+                    "text": "-enable-pretty-printing",
+                    "ignoreFailures": true
+                },
+                {
+                    "description": "Set Disassembly Flavor to Intel",
+                    "text": "-gdb-set disassembly-flavor intel",
+                    "ignoreFailures": true
+                }
+            ]
+        },
+        {
+            "name": "(gdb) Launch (chairbender note - not working ATM, use attach instead - everything is garbled)",
+            "type": "cppdbg",
+            "request": "launch",
+            "program": "${workspaceRoot}/build/sapf.exe",
+            "args": [],
+            "stopAtEntry": false,
+            "cwd": "${workspaceRoot}/build",
+            "environment": [
+                { "name": "MSYSTEM", "value": "UCRT64" },
+                { "name": "MSYS2_PATH_TYPE", "value": "inherit" },
+                { "name": "PATH", "value": "C:\\msys64\\ucrt64\\bin;${env:PATH}" }
+            ],
+            "externalConsole": false,
+            "MIMode": "gdb",
+            "miDebuggerPath": "C:\\msys64\\ucrt64\\bin\\gdb.exe",
+            "setupCommands": [
+                {
+                    "description": "Enable pretty-printing for gdb",
+                    "text": "-enable-pretty-printing",
+                    "ignoreFailures": true
+                },
+                {
+                    "description": "Set Disassembly Flavor to Intel",
+                    "text": "-gdb-set disassembly-flavor intel",
+                    "ignoreFailures": true
+                }
+            ]
+        }
+    ]
+}
+```
 
-TODO: methodically fix / port all the ifdefs _WIN32 stuff to make it work on windows as opposed to disabling entire functionality
+Example `.vscode/settings.json`
+```json
+{
+    "C_Cpp.default.compileCommands": "c:\\msys64\\home\\kwhip\\sapf\\build/compile_commands.json",
+    "C_Cpp.default.configurationProvider": "mesonbuild.mesonbuild"
+}
+```
 
-VSCode setup
-https://stackoverflow.com/questions/49209996/vs-code-mingw-intellisence-not-working-for-c
-https://code.visualstudio.com/docs/cpp/customize-default-settings-cpp
+Example `.vscode/tasks.json`
+```json
+{
+	"version": "2.0.0",
+	"tasks": [
+		{
+			"type": "meson",
+			"target": "sapf:executable",
+			"mode": "build",
+			"problemMatcher": [
+				"$meson-gcc"
+			],
+			"group": "build",
+			"label": "Meson: Build sapf:executable"
+		}
+	]
+}
+```
 
-Linker issues
-rtaudio
-https://stackoverflow.com/questions/35130096/c-undefined-reference-to-defined-constant
+### Windows Troubleshooting
 
-
-TODO: not sure if host_machine section needed in clang.ini
+#### Audio still plays after exiting
+This is a known issue when using ASIO4ALL. Working on it! You have to manually end sapf.exe via task
+manager.

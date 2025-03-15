@@ -175,7 +175,8 @@ public:
 		// TODO: it's not using WASAPI / directsound...ASIO only - compiler / linker flags needed?
 		//	the problem with that is on windows, the "default audio device" isn't ASIO. So really, you need
 		//  a way to actually pick the device (could be a command line arg or a prompt that gets saved to a settings file)
-		// if it's asio4all we have to let them pick the channel too
+		// if it's asio4all we have to let them pick the channel too.
+		// we could have it prompt then save to a file + allow setting command line args
 		auto deviceIds = this->audio.getDeviceIds();
 		for (auto & element : deviceIds) {
 			auto deviceInfo = this->audio.getDeviceInfo(element);
