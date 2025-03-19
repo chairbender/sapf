@@ -232,7 +232,6 @@ static const char* promptString()
 
 	/* Read a string, and return a pointer to it.
 	Returns NULL on EOF. */
-	// TODO: instead of copying and allocing here, modify the logic on the CONSUMING end to account for no \n on win32
 	char *rl_gets()
 	{
 		/* Get a line from the user. */
@@ -254,7 +253,6 @@ static const char* promptString()
 		modified[len + 1] = '\0'; // Null-terminate
 		free(line_read);
 		line_read = modified;
-		free(modified);
 		return (line_read);
 	}
 #endif
@@ -298,7 +296,6 @@ void Thread::getLine()
 		linepos = 0;
 		if (strncmp(line, "quit", 4)==0 || strncmp(line, "..", 2)==0) { line = NULL; throw errUserQuit; }
 		if (line && linelen) {
-			// TODO: seemingly not working (save / load)
 			write_history(historyfilename);
 			if (logfilename) {
 				FILE* logfile = fopen(logfilename, "a");
@@ -368,6 +365,17 @@ void Thread::repl(FILE* infile, const char* inLogfilename)
 	
 	previousTimeStamp = 0;
 
+	const char* envHistoryFileName = getenv("SAPF_HISTORY");
+	if (envHistoryFileName) {
+		snprintf(historyfilename, PATH_MAX, "%s", envHistoryFileName);
+	} else {
+		#ifdef _WIN32
+			const char* homeDir = getenv("USERPROFILE");
+		#else
+			const char* homeDir = getenv("HOME");
+		#endif
+		snprintf(historyfilename, PATH_MAX, "%s/sapf-history.txt", homeDir);
+	}
 #if USE_LIBEDIT
 	el = el_init("sc", stdin, stdout, stderr);
 	el_set(el, EL_PROMPT, &prompt);
@@ -380,13 +388,6 @@ void Thread::repl(FILE* infile, const char* inLogfilename)
 		return;
 	}
 
-	const char* envHistoryFileName = getenv("SAPF_HISTORY");
-	if (envHistoryFileName) {
-		snprintf(historyfilename, PATH_MAX, "%s", envHistoryFileName);
-	} else {
-		const char* homeDir = getenv("HOME");
-		snprintf(historyfilename, PATH_MAX, "%s/sapf-history.txt", homeDir);
-	}
 	history(myhistory, &ev, H_SETSIZE, 800);
 	history(myhistory, &ev, H_LOAD, historyfilename);
 	history(myhistory, &ev, H_SETUNIQUE, 1);
@@ -399,13 +400,6 @@ void Thread::repl(FILE* infile, const char* inLogfilename)
 	// it should default to "emacs" mode already
 
 	using_history();
-	const char* envHistoryFileName = getenv("SAPF_HISTORY");
-	if (envHistoryFileName) {
-		snprintf(historyfilename, PATH_MAX, "%s", envHistoryFileName);
-	} else {
-		const char* homeDir = getenv("HOME");
-		snprintf(historyfilename, PATH_MAX, "%s/sapf-history.txt", homeDir);
-	}
 	stifle_history(800);
 	read_history(historyfilename);
 	// duplicate entries should be cleared by default (I think this is the same as H_SETUNIQUE?)
