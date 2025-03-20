@@ -120,3 +120,11 @@ executable(
   cpp_args : cpp_args,
   link_args : link_args
 )
+
+# gtest - using wrap
+gtest_dep = dependency('gtest', fallback : ['gtest', 'gtest_dep'])
+
+test_exe = executable('test_hello', 'tests/test.cpp',
+  dependencies : [gtest_dep])
+
+test('test_hello', test_exe)

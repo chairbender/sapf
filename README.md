@@ -28,6 +28,17 @@ for installing dependencies, you can refer to the CI scripts in this repo:
 - [install-debian-deps.sh](.github/scripts/install-debian-deps.sh) (Debian, Ubuntu, Mint, etc.)
 - [install-macos-deps.sh](.github/scripts/install-macos-deps.sh) (macOS with Homebrew)
 
+## running tests
+Tests are located in `tests/` and are written using GoogleTest. GoogleTest itself is obtained
+via a wrap (`subprojects/gtest.wrap`).
+See [the GoogleTest user's guide](https://google.github.io/googletest/) for more details.
+
+(assuming you've already run `meson setup build` which will install the gtest dependency...)
+
+```shell
+meson test -C build
+```
+
 ## Windows Usage Caveats
 
 Windows support is currently WIP. The following current "quirks" apply:
@@ -49,6 +60,8 @@ if the package exists for your architecture.
 2. If you haven't yet, clone or copy this repo somewhere inside the msys2 install. For example within the msys2 shell you could install git via
 `pacman -S git` and then git clone this repo into your "home" folder.
 3. Open a msys2 (ucrt) shell and install some needed development dependencies
+    (Note the ca-certificates are required in order to download the gtest wrap, and in general you'll
+    have a bad time doing anything on msys2 without these certs.)
    ```shell
    # press ENTER when prompted to choose "all"
    pacman -S --needed base-devel mingw-w64-ucrt-x86_64-toolchain
@@ -58,7 +71,8 @@ if the package exists for your architecture.
     mingw-w64-ucrt-x86_64-libsndfile \
     mingw-w64-ucrt-x86_64-pkgconf \
     mingw-w64-ucrt-x86_64-rtaudio \
-    mingw-w64-ucrt-x86_64-readline
+    mingw-w64-ucrt-x86_64-readline \
+    mingw-w64-ucrt-x86_64-ca-certificates
    ```
 4. Close and reopen the shell to ensure it loads everything you just installed. 
 5. Now we can try to build in the msys2 (ucrt) shell.
