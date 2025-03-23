@@ -1021,15 +1021,36 @@ DEFINE_BINOP_FLOATVV1(nextafter, nextafter(a, b), vvnextafter(out, const_cast<Z*
 	BinaryOp* gBinaryOpPtr_plus = &gBinaryOp_plus;
 	BINARY_OP_PRIM(plus)
 
-	TEST_CASE("BinaryOp_plus loopz basic") {
+	TEST_CASE("BinaryOp_plus loopz") {
 		double aa[] = {1, 2, 3};
 		double bb[] = {1, 2, 3};
 		double out[3];
-		double expected[] = {2, 4, 6};
-		gBinaryOp_plus.loopz(3, aa, 1, bb, 1, out);
 
-		for (int i = 0; i < 3; ++i) {
-			CHECK(out[i] == doctest::Approx(expected[i]).epsilon(1e-9));
+		SUBCASE("add 2 vectors") {
+			double expected[] = {2, 4, 6};
+			gBinaryOp_plus.loopz(3, aa, 1, bb, 1, out);
+
+			for (int i = 0; i < 3; ++i) {
+				CHECK(out[i] == doctest::Approx(expected[i]).epsilon(1e-9));
+			}
+		}
+
+		SUBCASE("0 stepsize") {
+			double expected[] = {2, 2, 2};
+			gBinaryOp_plus.loopz(3, aa, 0, bb, 0, out);
+
+			for (int i = 0; i < 3; ++i) {
+				CHECK(out[i] == doctest::Approx(expected[i]).epsilon(1e-9));
+			}
+		}
+
+		SUBCASE("mismatch stepsize") {
+			double expected[] = {2, 3, 4};
+			gBinaryOp_plus.loopz(3, aa, 1, bb, 0, out);
+
+			for (int i = 0; i < 3; ++i) {
+				CHECK(out[i] == doctest::Approx(expected[i]).epsilon(1e-9));
+			}
 		}
 	}
 
