@@ -43,8 +43,7 @@ cpp_args = ['-std=c++17']
 link_args = []
 
 # needed even when not building a test exe because tests are inline with production code
-doctest_dep = dependency('doctest', required: true)
-deps += doctest_dep
+deps += dependency('doctest', required: true)
 
 # libedit
 if host_machine.system() == 'windows'
@@ -120,7 +119,7 @@ endif
 
 
 # testing is disabled in the release exe
-release_cpp_args = cpp_args + ['-DOCTEST_CONFIG_DISABLE', '-O3']
+release_cpp_args = cpp_args + ['-DDOCTEST_CONFIG_DISABLE', '-O3']
 
 # build targeting the native system this was built on, with optimizations (this is what people 
 # building on their own machine should use for optimal performance)
