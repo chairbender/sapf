@@ -953,21 +953,31 @@ DEFINE_BINOP_FLOAT_STRING(cmp,  sc_cmp(a, b), sc_sgn(strcmp(a, b)))
 DEFINE_BINOP_FLOATVV1(copysign, copysign(a, b), vvcopysign(out, const_cast<Z*>(aa), bb, &n)) // bug in vForce.h requires const_cast
 DEFINE_BINOP_FLOATVV1(nextafter, nextafter(a, b), vvnextafter(out, const_cast<Z*>(aa), bb, &n)) // bug in vForce.h requires const_cast
 
-using namespace Eigen;
+#ifndef SAPF_ACCELERATE
+	using namespace Eigen;
 
-#if SAMPLE_IS_DOUBLE
-	typedef Map<VectorXd, 0, InnerStride<>> ZVec;
-#else
-	typedef Map<VectorXf, 0, InnerStride<>> ZVec;
-#endif
-
-ZVec zvec(const Z *vec, int n, int stride) {
 	#if SAMPLE_IS_DOUBLE
-		return ZVec((double *)vec, n, InnerStride<>(stride));
+		typedef Map<VectorXd, 0, InnerStride<>> ZVec;
 	#else
-		return ZVec((float *)vec, n, InnerStride<>(stride));
+		typedef Map<VectorXf, 0, InnerStride<>> ZVec;
 	#endif
-}
+
+	ZVec zvec(const Z *vec, int n, int stride) {
+		#if SAMPLE_IS_DOUBLE
+			return ZVec((double *)vec, n, InnerStride<>(stride));
+		#else
+			return ZVec((float *)vec, n, InnerStride<>(stride));
+		#endif
+	}
+
+	#define ZVEC_OP(op, n, aa, astride, bb, bstride, out) \
+		do { \
+			const ZVec A = zvec(aa, n, astride); \
+			const ZVec B = zvec(bb, n, bstride); \
+			ZVec R = zvec(out, n, 1); \
+			R = op; \
+		} while (0)
+#endif
 
 // identity optimizations of basic operators.
 
@@ -983,7 +993,7 @@ ZVec zvec(const Z *vec, int n, int stride) {
 #ifdef SAPF_ACCELERATE
 					vDSP_vsaddD(const_cast<Z*>(bb), bstride, const_cast<Z*>(aa), out, 1, n);
 #else
-					vecop(aa, n, astride, bb, bstride, out);
+					ZVEC_OP(A + B, n, aa, astride, bb, bstride, out);
 #endif // SAPF_ACCELERATE
 				}
 			} else if (bstride == 0 ) {
@@ -993,26 +1003,17 @@ ZVec zvec(const Z *vec, int n, int stride) {
 #ifdef SAPF_ACCELERATE
 					vDSP_vsaddD(const_cast<Z*>(aa), astride, const_cast<Z*>(bb), out, 1, n);
 #else
-                    vecop(aa, n, astride, bb, bstride, out);
+                    ZVEC_OP(A + B, n, aa, astride, bb, bstride, out);
 #endif // SAPF_ACCELERATE
 				}
 			} else {
 #ifdef SAPF_ACCELERATE
 				vDSP_vaddD(aa, astride, bb, bstride, out, 1, n);
 #else
-					vecop(aa, n, astride, bb, bstride, out);
+					ZVEC_OP(A + B, n, aa, astride, bb, bstride, out);
 #endif // SAPF_ACCELERATE
 			}
         }
-		#ifndef SAPF_ACCELERATE
-			void vecop(const Z *aa, int n, int astride, const Z *bb, int bstride, Z *out)
-			{
-				const ZVec A = zvec(aa, n, astride);
-				const ZVec B = zvec(bb, n, bstride);
-				ZVec R = zvec(out, n, 1);
-				R = A + B;
-			}
-		#endif
         virtual void pairsz(int n, Z& z, Z *aa, int astride, Z *out) {
 			Z b = z;
 			LOOP(i,n) { Z a = *aa; out[i] = a + b; b = a; aa += astride; }
@@ -1091,7 +1092,7 @@ ZVec zvec(const Z *vec, int n, int stride) {
 #ifdef SAPF_ACCELERATE
 					vDSP_vsaddD(const_cast<Z*>(bb), bstride, const_cast<Z*>(aa), out, 1, n);
 #else
-                                        LOOP(i,n) { Z b = *bb; Z a = *aa; out[i] = b + a; bb += bstride; }
+					ZVEC_OP(A + B, n, aa, astride, bb, bstride, out);
 #endif // SAPF_ACCELERATE
 				}
 			} else if (bstride == 0 ) {
@@ -1102,14 +1103,14 @@ ZVec zvec(const Z *vec, int n, int stride) {
 #ifdef SAPF_ACCELERATE
 					vDSP_vsaddD(const_cast<Z*>(aa), astride, const_cast<Z*>(bb), out, 1, n);
 #else
-                                        LOOP(i,n) { Z a = *aa; Z b = *bb; out[i] = a + b; aa += astride; }
+					ZVEC_OP(A + B, n, aa, astride, bb, bstride, out);
 #endif // SAPF_ACCELERATE
 				}
 			} else {
 #ifdef SAPF_ACCELERATE
 				vDSP_vaddD(aa, astride, bb, bstride, out, 1, n);
 #else
-				LOOP(i,n) { Z a = *aa; Z b = *bb; out[i] = a + b; aa += astride; bb += bstride; }
+				ZVEC_OP(A + B, n, aa, astride, bb, bstride, out);
 #endif // SAPF_ACCELERATE
 			}
 		}
@@ -1146,6 +1147,39 @@ ZVec zvec(const Z *vec, int n, int stride) {
 	BinaryOp* gBinaryOpPtr_plus_link = &gBinaryOp_plus_link;
 	BINARY_OP_PRIM(plus_link)
 
+	TEST_CASE("BinaryOp_plus_link loopz") {
+		double aa[] = {1, 2, 3};
+		double bb[] = {1, 2, 3};
+		double out[3];
+
+		SUBCASE("add 2 vectors") {
+			double expected[] = {2, 4, 6};
+			gBinaryOp_plus_link.loopz(3, aa, 1, bb, 1, out);
+
+			for (int i = 0; i < 3; ++i) {
+				CHECK(out[i] == doctest::Approx(expected[i]).epsilon(1e-9));
+			}
+		}
+
+		SUBCASE("0 stride") {
+			double expected[] = {2, 2, 2};
+			gBinaryOp_plus_link.loopz(3, aa, 0, bb, 0, out);
+
+			for (int i = 0; i < 3; ++i) {
+				CHECK(out[i] == doctest::Approx(expected[i]).epsilon(1e-9));
+			}
+		}
+
+		SUBCASE("mismatch stride") {
+			double expected[] = {2, 3, 4};
+			gBinaryOp_plus_link.loopz(3, aa, 1, bb, 0, out);
+
+			for (int i = 0; i < 3; ++i) {
+				CHECK(out[i] == doctest::Approx(expected[i]).epsilon(1e-9));
+			}
+		}
+	}
+
 
 	struct BinaryOp_minus : public BinaryOp {
 		virtual const char *Name() { return "minus"; }
@@ -1155,14 +1189,13 @@ ZVec zvec(const Z *vec, int n, int stride) {
 #ifdef SAPF_ACCELERATE
 				vDSP_vnegD(const_cast<Z*>(bb), bstride, out, 1, n);
 #else
-                                LOOP(i,n) { Z b = *bb; out[i] = -b; bb += bstride; }
+				ZVEC_OP(A - B, n, aa, astride, bb, bstride, out);
 #endif // SAPF_ACCELERATE
 				if (*aa != 0.) {
 #ifdef SAPF_ACCELERATE
 					vDSP_vsaddD(const_cast<Z*>(out), 1, const_cast<Z*>(aa), out, 1, n);
 #else
-                                        Z a = *aa;
-					LOOP(i,n) { out[i] += a; }
+					ZVEC_OP(A - B, n, aa, astride, bb, bstride, out);
 #endif // SAPF_ACCELERATE
 				}
 			} else if (bstride == 0 ) {
@@ -1172,17 +1205,26 @@ ZVec zvec(const Z *vec, int n, int stride) {
 #ifdef SAPF_ACCELERATE
 					vDSP_vsaddD(const_cast<Z*>(out), 1, &b, out, 1, n);
 #else
-                                        LOOP(i,n) { out[i] += b; }
+					ZVEC_OP(A - B, n, aa, astride, bb, bstride, out);
 #endif // SAPF_ACCELERATE
 				}
 			} else {
 #ifdef SAPF_ACCELERATE
 				vDSP_vsubD(aa, astride, bb, bstride, out, 1, n);
 #else
-                                LOOP(i,n) { Z a = *aa; Z b = *bb; out[i] = a - b; aa += astride; bb += bstride; }
+				ZVEC_OP(A - B, n, aa, astride, bb, bstride, out);
 #endif // SAPF_ACCELERATE
 			}
 		}
+		#ifndef SAPF_ACCELERATE
+			void vecop(const Z *aa, int n, int astride, const Z *bb, int bstride, Z *out)
+			{
+				const ZVec A = zvec(aa, n, astride);
+				const ZVec B = zvec(bb, n, bstride);
+				ZVec R = zvec(out, n, 1);
+				R = A - B;
+			}
+		#endif
 		virtual void pairsz(int n, Z& z, Z *aa, int astride, Z *out) {
 			Z b = z;
 			LOOP(i,n) { Z a = *aa; out[i] = a - b; b = a; aa += astride; }
@@ -1217,6 +1259,38 @@ ZVec zvec(const Z *vec, int n, int stride) {
 	BinaryOp* gBinaryOpPtr_minus = &gBinaryOp_minus;
 	BINARY_OP_PRIM(minus)
 
+	TEST_CASE("BinaryOp_ minus loopz") {
+		double aa[] = {1, 2, 3};
+		double bb[] = {1, 2, 3};
+		double out[3];
+
+		SUBCASE("sub 2 vectors") {
+			double expected[] = {0, 0, 0};
+			gBinaryOp_minus.loopz(3, aa, 1, bb, 1, out);
+
+			for (int i = 0; i < 3; ++i) {
+				CHECK(out[i] == doctest::Approx(expected[i]).epsilon(1e-9));
+			}
+		}
+
+		SUBCASE("0 stride") {
+			double expected[] = {0, 0, 0};
+			gBinaryOp_minus.loopz(3, aa, 0, bb, 0, out);
+
+			for (int i = 0; i < 3; ++i) {
+				CHECK(out[i] == doctest::Approx(expected[i]).epsilon(1e-9));
+			}
+		}
+
+		SUBCASE("mismatch stride") {
+			double expected[] = {0, 1, 2};
+			gBinaryOp_minus.loopz(3, aa, 1, bb, 0, out);
+
+			for (int i = 0; i < 3; ++i) {
+				CHECK(out[i] == doctest::Approx(expected[i]).epsilon(1e-9));
+			}
+		}
+	}
 
 
 	struct BinaryOp_mul : public BinaryOp {
@@ -1372,6 +1446,7 @@ DEFINE_BINOP_FLOAT(remainder, remainder(a, b))
 DEFINE_BINOP_INT(idiv, sc_div(a, b))
 DEFINE_BINOP_INT(imod, sc_imod(a, b))
 
+// TODO: do these functions actually work?
 DEFINE_BINOP_FLOATVV1(pow, sc_pow(a, b), vvpow(out, bb, aa, &n))
 DEFINE_BINOP_FLOATVV1(atan2, atan2(a, b), vvatan2(out, aa, bb, &n))
 
@@ -1384,6 +1459,7 @@ DEFINE_BINOP_FLOATVV1(atan2, atan2(a, b), vvatan2(out, aa, bb, &n))
 #endif
 
 
+// TODO: calling vDSP functions but not defined out
 DEFINE_BINOP_FLOATVV(min, fmin(a, b), vDSP_vminD(const_cast<Z*>(aa), astride, const_cast<Z*>(bb), bstride, out, 1, n))
 DEFINE_BINOP_FLOATVV(max, fmax(a, b), vDSP_vmaxD(const_cast<Z*>(aa), astride, const_cast<Z*>(bb), bstride, out, 1, n))
 DEFINE_BINOP_FLOAT(dim, fdim(a, b))
