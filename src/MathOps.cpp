@@ -954,19 +954,18 @@ DEFINE_BINOP_FLOATVV1(copysign, copysign(a, b), vvcopysign(out, const_cast<Z*>(a
 DEFINE_BINOP_FLOATVV1(nextafter, nextafter(a, b), vvnextafter(out, const_cast<Z*>(aa), bb, &n)) // bug in vForce.h requires const_cast
 
 #ifndef SAPF_ACCELERATE
-	using namespace Eigen;
 
 	#if SAMPLE_IS_DOUBLE
-		typedef Map<ArrayXd, 0, InnerStride<>> ZArr;
+		typedef Eigen::Map<Eigen::ArrayXd, 0, Eigen::InnerStride<>> ZArr;
 	#else
-		typedef Map<ArrayXf, 0, InnerStride<>> ZArr;
+		typedef Eigen::Map<Eigen::ArrayXf, 0, Eigen::InnerStride<>> ZArr;
 	#endif
 
 	ZArr zarr(const Z *vec, int n, int stride) {
 		#if SAMPLE_IS_DOUBLE
-			return ZArr((double *)vec, n, InnerStride<>(stride));
+			return ZArr((double *)vec, n, Eigen::InnerStride<>(stride));
 		#else
-			return ZArr((float *)vec, n, InnerStride<>(stride));
+			return ZArr((float *)vec, n, Eigen::InnerStride<>(stride));
 		#endif
 	}
 
