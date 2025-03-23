@@ -48,17 +48,21 @@ if the package exists for your architecture.
 "root directory" is for your msys2 / mingw64 shells. For this guide we will assume the default of `C:\msys64`
 2. If you haven't yet, clone or copy this repo somewhere inside the msys2 install. For example within the msys2 shell you could install git via
 `pacman -S git` and then git clone this repo into your "home" folder.
-3. Open a msys2 (ucrt) shell and install some needed development dependencies
+3. Open a msys2 (ucrt) shell and install some needed development dependencies.
+    (Note the ca-certificates are required in order to download the gtest wrap, and in general you'll
+    have a bad time doing anything on msys2 without these certs.)
    ```shell
    # press ENTER when prompted to choose "all"
-   pacman -S --needed base-devel mingw-w64-ucrt-x86_64-toolchain
+   pacman -S --needed base-devel \
+    mingw-w64-ucrt-x86_64-toolchain
    pacman -S \
     mingw-w64-ucrt-x86_64-meson \
     mingw-w64-ucrt-x86_64-fftw \
     mingw-w64-ucrt-x86_64-libsndfile \
     mingw-w64-ucrt-x86_64-pkgconf \
     mingw-w64-ucrt-x86_64-rtaudio \
-    mingw-w64-ucrt-x86_64-readline
+    mingw-w64-ucrt-x86_64-readline \
+    mingw-w64-ucrt-x86_64-ca-certificates
    ```
 4. Close and reopen the shell to ensure it loads everything you just installed. 
 5. Now we can try to build in the msys2 (ucrt) shell.
