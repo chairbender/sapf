@@ -957,24 +957,24 @@ DEFINE_BINOP_FLOATVV1(nextafter, nextafter(a, b), vvnextafter(out, const_cast<Z*
 	using namespace Eigen;
 
 	#if SAMPLE_IS_DOUBLE
-		typedef Map<VectorXd, 0, InnerStride<>> ZVec;
+		typedef Map<ArrayXd, 0, InnerStride<>> ZArr;
 	#else
-		typedef Map<VectorXf, 0, InnerStride<>> ZVec;
+		typedef Map<ArrayXf, 0, InnerStride<>> ZArr;
 	#endif
 
-	ZVec zvec(const Z *vec, int n, int stride) {
+	ZArr zarr(const Z *vec, int n, int stride) {
 		#if SAMPLE_IS_DOUBLE
-			return ZVec((double *)vec, n, InnerStride<>(stride));
+			return ZArr((double *)vec, n, InnerStride<>(stride));
 		#else
-			return ZVec((float *)vec, n, InnerStride<>(stride));
+			return ZArr((float *)vec, n, InnerStride<>(stride));
 		#endif
 	}
 
-	#define ZVEC_OP(op, n, aa, astride, bb, bstride, out) \
+	#define ZARR_OP(op, n, aa, astride, bb, bstride, out) \
 		do { \
-			const ZVec A = zvec(aa, n, astride); \
-			const ZVec B = zvec(bb, n, bstride); \
-			ZVec R = zvec(out, n, 1); \
+			const ZArr A = zarr(aa, n, astride); \
+			const ZArr B = zarr(bb, n, bstride); \
+			ZArr R = zarr(out, n, 1); \
 			R = op; \
 		} while (0)
 #endif
@@ -993,7 +993,7 @@ DEFINE_BINOP_FLOATVV1(nextafter, nextafter(a, b), vvnextafter(out, const_cast<Z*
 #ifdef SAPF_ACCELERATE
 					vDSP_vsaddD(const_cast<Z*>(bb), bstride, const_cast<Z*>(aa), out, 1, n);
 #else
-					ZVEC_OP(A + B, n, aa, astride, bb, bstride, out);
+					ZARR_OP(A + B, n, aa, astride, bb, bstride, out);
 #endif // SAPF_ACCELERATE
 				}
 			} else if (bstride == 0 ) {
@@ -1003,14 +1003,14 @@ DEFINE_BINOP_FLOATVV1(nextafter, nextafter(a, b), vvnextafter(out, const_cast<Z*
 #ifdef SAPF_ACCELERATE
 					vDSP_vsaddD(const_cast<Z*>(aa), astride, const_cast<Z*>(bb), out, 1, n);
 #else
-                    ZVEC_OP(A + B, n, aa, astride, bb, bstride, out);
+                    ZARR_OP(A + B, n, aa, astride, bb, bstride, out);
 #endif // SAPF_ACCELERATE
 				}
 			} else {
 #ifdef SAPF_ACCELERATE
 				vDSP_vaddD(aa, astride, bb, bstride, out, 1, n);
 #else
-					ZVEC_OP(A + B, n, aa, astride, bb, bstride, out);
+					ZARR_OP(A + B, n, aa, astride, bb, bstride, out);
 #endif // SAPF_ACCELERATE
 			}
         }
@@ -1082,7 +1082,7 @@ DEFINE_BINOP_FLOATVV1(nextafter, nextafter(a, b), vvnextafter(out, const_cast<Z*
 
 		SUBCASE("astride 0 bstride 1") {
 			double expected[] = {5, 6, 7};
-			gBinaryOp_plus.loopz(3, aa, 1, bb, 0, out);
+			gBinaryOp_plus.loopz(3, aa, 0, bb, 1, out);
 
 			for (int i = 0; i < 3; ++i) {
 				CHECK(out[i] == doctest::Approx(expected[i]).epsilon(1e-9));
@@ -1120,7 +1120,7 @@ DEFINE_BINOP_FLOATVV1(nextafter, nextafter(a, b), vvnextafter(out, const_cast<Z*
 #ifdef SAPF_ACCELERATE
 					vDSP_vsaddD(const_cast<Z*>(bb), bstride, const_cast<Z*>(aa), out, 1, n);
 #else
-					ZVEC_OP(A + B, n, aa, astride, bb, bstride, out);
+					ZARR_OP(A + B, n, aa, astride, bb, bstride, out);
 #endif // SAPF_ACCELERATE
 				}
 			} else if (bstride == 0 ) {
@@ -1131,14 +1131,14 @@ DEFINE_BINOP_FLOATVV1(nextafter, nextafter(a, b), vvnextafter(out, const_cast<Z*
 #ifdef SAPF_ACCELERATE
 					vDSP_vsaddD(const_cast<Z*>(aa), astride, const_cast<Z*>(bb), out, 1, n);
 #else
-					ZVEC_OP(A + B, n, aa, astride, bb, bstride, out);
+					ZARR_OP(A + B, n, aa, astride, bb, bstride, out);
 #endif // SAPF_ACCELERATE
 				}
 			} else {
 #ifdef SAPF_ACCELERATE
 				vDSP_vaddD(aa, astride, bb, bstride, out, 1, n);
 #else
-				ZVEC_OP(A + B, n, aa, astride, bb, bstride, out);
+				ZARR_OP(A + B, n, aa, astride, bb, bstride, out);
 #endif // SAPF_ACCELERATE
 			}
 		}
@@ -1210,7 +1210,7 @@ DEFINE_BINOP_FLOATVV1(nextafter, nextafter(a, b), vvnextafter(out, const_cast<Z*
 
 		SUBCASE("astride 0 bstride 1") {
 			double expected[] = {5, 6, 7};
-			gBinaryOp_plus_link.loopz(3, aa, 1, bb, 0, out);
+			gBinaryOp_plus_link.loopz(3, aa, 0, bb, 1, out);
 
 			for (int i = 0; i < 3; ++i) {
 				CHECK(out[i] == doctest::Approx(expected[i]).epsilon(1e-9));
@@ -1245,13 +1245,13 @@ DEFINE_BINOP_FLOATVV1(nextafter, nextafter(a, b), vvnextafter(out, const_cast<Z*
 #ifdef SAPF_ACCELERATE
 				vDSP_vnegD(const_cast<Z*>(bb), bstride, out, 1, n);
 #else
-				ZVEC_OP(A - B, n, aa, astride, bb, bstride, out);
+				ZARR_OP(A - B, n, aa, astride, bb, bstride, out);
 #endif // SAPF_ACCELERATE
 				if (*aa != 0.) {
 #ifdef SAPF_ACCELERATE
 					vDSP_vsaddD(const_cast<Z*>(out), 1, const_cast<Z*>(aa), out, 1, n);
 #else
-					ZVEC_OP(A - B, n, aa, astride, bb, bstride, out);
+					ZARR_OP(A - B, n, aa, astride, bb, bstride, out);
 #endif // SAPF_ACCELERATE
 				}
 			} else if (bstride == 0 ) {
@@ -1261,14 +1261,14 @@ DEFINE_BINOP_FLOATVV1(nextafter, nextafter(a, b), vvnextafter(out, const_cast<Z*
 #ifdef SAPF_ACCELERATE
 					vDSP_vsaddD(const_cast<Z*>(out), 1, &b, out, 1, n);
 #else
-					ZVEC_OP(A - B, n, aa, astride, bb, bstride, out);
+					ZARR_OP(A - B, n, aa, astride, bb, bstride, out);
 #endif // SAPF_ACCELERATE
 				}
 			} else {
 #ifdef SAPF_ACCELERATE
 				vDSP_vsubD(aa, astride, bb, bstride, out, 1, n);
 #else
-				ZVEC_OP(A - B, n, aa, astride, bb, bstride, out);
+				ZARR_OP(A - B, n, aa, astride, bb, bstride, out);
 #endif // SAPF_ACCELERATE
 			}
 		}
@@ -1306,13 +1306,14 @@ DEFINE_BINOP_FLOATVV1(nextafter, nextafter(a, b), vvnextafter(out, const_cast<Z*
 	BinaryOp* gBinaryOpPtr_minus = &gBinaryOp_minus;
 	BINARY_OP_PRIM(minus)
 
-	TEST_CASE("BinaryOp_ minus loopz") {
+	TEST_CASE("BinaryOp_minus loopz") {
 		double aa[] = {1, 2, 3};
-		double bb[] = {1, 2, 3};
+		double bb[] = {4, 5, 6};
+		double zero[] = {0};
 		double out[3];
 
-		SUBCASE("sub 2 vectors") {
-			double expected[] = {0, 0, 0};
+		SUBCASE("stride 1") {
+			double expected[] = {-3, -3, -3};
 			gBinaryOp_minus.loopz(3, aa, 1, bb, 1, out);
 
 			for (int i = 0; i < 3; ++i) {
@@ -1320,8 +1321,8 @@ DEFINE_BINOP_FLOATVV1(nextafter, nextafter(a, b), vvnextafter(out, const_cast<Z*
 			}
 		}
 
-		SUBCASE("0 stride") {
-			double expected[] = {0, 0, 0};
+		SUBCASE("stride 0") {
+			double expected[] = {-3, -3, -3};
 			gBinaryOp_minus.loopz(3, aa, 0, bb, 0, out);
 
 			for (int i = 0; i < 3; ++i) {
@@ -1329,9 +1330,36 @@ DEFINE_BINOP_FLOATVV1(nextafter, nextafter(a, b), vvnextafter(out, const_cast<Z*
 			}
 		}
 
-		SUBCASE("mismatch stride") {
-			double expected[] = {0, 1, 2};
+		SUBCASE("astride 1 bstride 0") {
+			double expected[] = {-3, -2, -1};
 			gBinaryOp_minus.loopz(3, aa, 1, bb, 0, out);
+
+			for (int i = 0; i < 3; ++i) {
+				CHECK(out[i] == doctest::Approx(expected[i]).epsilon(1e-9));
+			}
+		}
+
+		SUBCASE("astride 0 bstride 1") {
+			double expected[] = {-3, -4, -5};
+			gBinaryOp_minus.loopz(3, aa, 0, bb, 1, out);
+
+			for (int i = 0; i < 3; ++i) {
+				CHECK(out[i] == doctest::Approx(expected[i]).epsilon(1e-9));
+			}
+		}
+
+		SUBCASE("astride 0 a = 0") {
+			double expected[] = {-4, -5, -6};
+			gBinaryOp_minus.loopz(3, zero, 0, bb, 1, out);
+
+			for (int i = 0; i < 3; ++i) {
+				CHECK(out[i] == doctest::Approx(expected[i]).epsilon(1e-9));
+			}
+		}
+
+		SUBCASE("bstride 0 b = 0") {
+			double expected[] = {1, 2, 3};
+			gBinaryOp_minus.loopz(3, aa, 1, zero, 0, out);
 
 			for (int i = 0; i < 3; ++i) {
 				CHECK(out[i] == doctest::Approx(expected[i]).epsilon(1e-9));
@@ -1353,8 +1381,7 @@ DEFINE_BINOP_FLOATVV1(nextafter, nextafter(a, b), vvnextafter(out, const_cast<Z*
 #ifdef SAPF_ACCELERATE
 					vDSP_vsmulD(bb, bstride, aa, out, 1, n);
 #else
-                                        Z a = *aa;
-                                        LOOP(i,n) { Z b = *bb; out[i] = b * a; bb += bstride; }
+					ZARR_OP(A * B, n, aa, astride, bb, bstride, out);
 #endif // SAPF_ACCELERATE
 				}
 			} else if (bstride == 0) {
@@ -1366,15 +1393,14 @@ DEFINE_BINOP_FLOATVV1(nextafter, nextafter(a, b), vvnextafter(out, const_cast<Z*
 #ifdef SAPF_ACCELERATE
 					vDSP_vsmulD(aa, astride, bb, out, 1, n);
 #else
-                                        Z b = *bb;
-                                        LOOP(i,n) { Z a = *aa; out[i] = a * b; aa += astride; }
+                    ZARR_OP(A * B, n, aa, astride, bb, bstride, out);
 #endif // SAPF_ACCELERATE
 				}
 			} else {
 #ifdef SAPF_ACCELERATE
 				vDSP_vmulD(aa, astride, bb, bstride, out, 1, n);
 #else
-				LOOP(i,n) { Z a = *aa; Z b = *bb; out[i] = a * b; aa += astride; bb += bstride; }
+				ZARR_OP(A * B, n, aa, astride, bb, bstride, out);
 #endif // SAPF_ACCELERATE
 			}
 		}
@@ -1427,6 +1453,67 @@ DEFINE_BINOP_FLOATVV1(nextafter, nextafter(a, b), vvnextafter(out, const_cast<Z*
 	BinaryOp_mul gBinaryOp_mul;
 	BinaryOp* gBinaryOpPtr_mul = &gBinaryOp_mul;
 	BINARY_OP_PRIM(mul)
+
+	TEST_CASE("BinaryOp_mul loopz") {
+		double aa[] = {1, 2, 3};
+		double bb[] = {4, 5, 6};
+		double zero[] = {0};
+		double out[3];
+
+		SUBCASE("stride 1") {
+			double expected[] = {4, 10, 18};
+			gBinaryOp_mul.loopz(3, aa, 1, bb, 1, out);
+
+			for (int i = 0; i < 3; ++i) {
+				CHECK(out[i] == doctest::Approx(expected[i]).epsilon(1e-9));
+			}
+		}
+
+		SUBCASE("stride 0") {
+			double expected[] = {4, 4, 4};
+			gBinaryOp_mul.loopz(3, aa, 0, bb, 0, out);
+
+			for (int i = 0; i < 3; ++i) {
+				CHECK(out[i] == doctest::Approx(expected[i]).epsilon(1e-9));
+			}
+		}
+
+		SUBCASE("astride 1 bstride 0") {
+			double expected[] = {4, 8, 12};
+			gBinaryOp_mul.loopz(3, aa, 1, bb, 0, out);
+
+			for (int i = 0; i < 3; ++i) {
+				CHECK(out[i] == doctest::Approx(expected[i]).epsilon(1e-9));
+			}
+		}
+
+		SUBCASE("astride 0 bstride 1") {
+			double expected[] = {4, 5, 6};
+			gBinaryOp_mul.loopz(3, aa, 0, bb, 1, out);
+
+			for (int i = 0; i < 3; ++i) {
+				CHECK(out[i] == doctest::Approx(expected[i]).epsilon(1e-9));
+			}
+		}
+
+		SUBCASE("astride 0 a = 0") {
+			double expected[] = {0, 0, 0};
+			gBinaryOp_mul.loopz(3, zero, 0, bb, 1, out);
+
+			for (int i = 0; i < 3; ++i) {
+				CHECK(out[i] == doctest::Approx(expected[i]).epsilon(1e-9));
+			}
+		}
+
+		SUBCASE("bstride 0 b = 0") {
+			double expected[] = {0, 0, 0};
+			gBinaryOp_mul.loopz(3, aa, 1, zero, 0, out);
+
+			for (int i = 0; i < 3; ++i) {
+				CHECK(out[i] == doctest::Approx(expected[i]).epsilon(1e-9));
+			}
+		}
+	}
 
 
 	struct BinaryOp_div : public BinaryOp {
