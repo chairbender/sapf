@@ -1049,11 +1049,12 @@ DEFINE_BINOP_FLOATVV1(nextafter, nextafter(a, b), vvnextafter(out, const_cast<Z*
 
 	TEST_CASE("BinaryOp_plus loopz") {
 		double aa[] = {1, 2, 3};
-		double bb[] = {1, 2, 3};
+		double bb[] = {4, 5, 6};
+		double zero[] = {0};
 		double out[3];
 
-		SUBCASE("add 2 vectors") {
-			double expected[] = {2, 4, 6};
+		SUBCASE("stride 1") {
+			double expected[] = {5, 7, 9};
 			gBinaryOp_plus.loopz(3, aa, 1, bb, 1, out);
 
 			for (int i = 0; i < 3; ++i) {
@@ -1061,8 +1062,8 @@ DEFINE_BINOP_FLOATVV1(nextafter, nextafter(a, b), vvnextafter(out, const_cast<Z*
 			}
 		}
 
-		SUBCASE("0 stride") {
-			double expected[] = {2, 2, 2};
+		SUBCASE("stride 0") {
+			double expected[] = {5, 5, 5};
 			gBinaryOp_plus.loopz(3, aa, 0, bb, 0, out);
 
 			for (int i = 0; i < 3; ++i) {
@@ -1070,9 +1071,36 @@ DEFINE_BINOP_FLOATVV1(nextafter, nextafter(a, b), vvnextafter(out, const_cast<Z*
 			}
 		}
 
-		SUBCASE("mismatch stride") {
-			double expected[] = {2, 3, 4};
+		SUBCASE("astride 1 bstride 0") {
+			double expected[] = {5, 6, 7};
 			gBinaryOp_plus.loopz(3, aa, 1, bb, 0, out);
+
+			for (int i = 0; i < 3; ++i) {
+				CHECK(out[i] == doctest::Approx(expected[i]).epsilon(1e-9));
+			}
+		}
+
+		SUBCASE("astride 0 bstride 1") {
+			double expected[] = {5, 6, 7};
+			gBinaryOp_plus.loopz(3, aa, 1, bb, 0, out);
+
+			for (int i = 0; i < 3; ++i) {
+				CHECK(out[i] == doctest::Approx(expected[i]).epsilon(1e-9));
+			}
+		}
+
+		SUBCASE("astride 0 a = 0") {
+			double expected[] = {4, 5, 6};
+			gBinaryOp_plus.loopz(3, zero, 0, bb, 1, out);
+
+			for (int i = 0; i < 3; ++i) {
+				CHECK(out[i] == doctest::Approx(expected[i]).epsilon(1e-9));
+			}
+		}
+
+		SUBCASE("bstride 0 b = 0") {
+			double expected[] = {1, 2, 3};
+			gBinaryOp_plus.loopz(3, aa, 1, zero, 0, out);
 
 			for (int i = 0; i < 3; ++i) {
 				CHECK(out[i] == doctest::Approx(expected[i]).epsilon(1e-9));
@@ -1147,13 +1175,14 @@ DEFINE_BINOP_FLOATVV1(nextafter, nextafter(a, b), vvnextafter(out, const_cast<Z*
 	BinaryOp* gBinaryOpPtr_plus_link = &gBinaryOp_plus_link;
 	BINARY_OP_PRIM(plus_link)
 
-	TEST_CASE("BinaryOp_plus_link loopz") {
+	TEST_CASE("BinaryOp_plus loopz") {
 		double aa[] = {1, 2, 3};
-		double bb[] = {1, 2, 3};
+		double bb[] = {4, 5, 6};
+		double zero[] = {0};
 		double out[3];
 
-		SUBCASE("add 2 vectors") {
-			double expected[] = {2, 4, 6};
+		SUBCASE("stride 1") {
+			double expected[] = {5, 7, 9};
 			gBinaryOp_plus_link.loopz(3, aa, 1, bb, 1, out);
 
 			for (int i = 0; i < 3; ++i) {
@@ -1161,8 +1190,8 @@ DEFINE_BINOP_FLOATVV1(nextafter, nextafter(a, b), vvnextafter(out, const_cast<Z*
 			}
 		}
 
-		SUBCASE("0 stride") {
-			double expected[] = {2, 2, 2};
+		SUBCASE("stride 0") {
+			double expected[] = {5, 5, 5};
 			gBinaryOp_plus_link.loopz(3, aa, 0, bb, 0, out);
 
 			for (int i = 0; i < 3; ++i) {
@@ -1170,9 +1199,36 @@ DEFINE_BINOP_FLOATVV1(nextafter, nextafter(a, b), vvnextafter(out, const_cast<Z*
 			}
 		}
 
-		SUBCASE("mismatch stride") {
-			double expected[] = {2, 3, 4};
+		SUBCASE("astride 1 bstride 0") {
+			double expected[] = {5, 6, 7};
 			gBinaryOp_plus_link.loopz(3, aa, 1, bb, 0, out);
+
+			for (int i = 0; i < 3; ++i) {
+				CHECK(out[i] == doctest::Approx(expected[i]).epsilon(1e-9));
+			}
+		}
+
+		SUBCASE("astride 0 bstride 1") {
+			double expected[] = {5, 6, 7};
+			gBinaryOp_plus_link.loopz(3, aa, 1, bb, 0, out);
+
+			for (int i = 0; i < 3; ++i) {
+				CHECK(out[i] == doctest::Approx(expected[i]).epsilon(1e-9));
+			}
+		}
+
+		SUBCASE("astride 0 a = 0") {
+			double expected[] = {4, 5, 6};
+			gBinaryOp_plus_link.loopz(3, zero, 0, bb, 1, out);
+
+			for (int i = 0; i < 3; ++i) {
+				CHECK(out[i] == doctest::Approx(expected[i]).epsilon(1e-9));
+			}
+		}
+
+		SUBCASE("bstride 0 b = 0") {
+			double expected[] = {1, 2, 3};
+			gBinaryOp_plus_link.loopz(3, aa, 1, zero, 0, out);
 
 			for (int i = 0; i < 3; ++i) {
 				CHECK(out[i] == doctest::Approx(expected[i]).epsilon(1e-9));
@@ -1216,15 +1272,6 @@ DEFINE_BINOP_FLOATVV1(nextafter, nextafter(a, b), vvnextafter(out, const_cast<Z*
 #endif // SAPF_ACCELERATE
 			}
 		}
-		#ifndef SAPF_ACCELERATE
-			void vecop(const Z *aa, int n, int astride, const Z *bb, int bstride, Z *out)
-			{
-				const ZVec A = zvec(aa, n, astride);
-				const ZVec B = zvec(bb, n, bstride);
-				ZVec R = zvec(out, n, 1);
-				R = A - B;
-			}
-		#endif
 		virtual void pairsz(int n, Z& z, Z *aa, int astride, Z *out) {
 			Z b = z;
 			LOOP(i,n) { Z a = *aa; out[i] = a - b; b = a; aa += astride; }
