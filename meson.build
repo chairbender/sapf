@@ -120,3 +120,9 @@ executable(
   cpp_args : cpp_args,
   link_args : link_args
 )
+
+# tests
+# gtest - using wrap
+test_exe = executable('test_hello', 'test/test_MathOps.cpp')
+
+test('test_hello', test_exe)

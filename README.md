@@ -28,6 +28,14 @@ for installing dependencies, you can refer to the CI scripts in this repo:
 - [install-debian-deps.sh](.github/scripts/install-debian-deps.sh) (Debian, Ubuntu, Mint, etc.)
 - [install-macos-deps.sh](.github/scripts/install-macos-deps.sh) (macOS with Homebrew)
 
+## running tests
+Tests are located in `test/` and are written using doctest (which is included and doesn't need to be obtained separately).
+See [the doctest documentation](https://github.com/doctest/doctest/tree/master?tab=readme-ov-file#documentation) for more details.
+
+```shell
+meson test -C build
+```
+
 ## Windows Usage Caveats
 
 Windows support is currently WIP. The following current "quirks" apply:
