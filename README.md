@@ -29,7 +29,7 @@ for installing dependencies, you can refer to the CI scripts in this repo:
 - [install-macos-deps.sh](.github/scripts/install-macos-deps.sh) (macOS with Homebrew)
 
 ## running tests
-Tests are located in `test/` and are written using doctest (which is obtained via a wrap)
+Tests are written using doctest (which is obtained via a wrap).
 See [the doctest documentation](https://github.com/doctest/doctest/tree/master?tab=readme-ov-file#documentation) for more details.
 
 The test are inline with the production code. There is not a separate "test exe" - testing is done simply by building

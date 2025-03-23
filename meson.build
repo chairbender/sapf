@@ -42,11 +42,9 @@ deps = []
 cpp_args = ['-std=c++17']
 link_args = []
 
-# tests
+# needed even when not building a test exe because tests are inline with production code
 doctest_dep = dependency('doctest', required: true)
-# TODO: Only do this when not building a production release
 deps += doctest_dep
-
 
 # libedit
 if host_machine.system() == 'windows'
@@ -119,10 +117,19 @@ if get_option('manta')
   add_project_arguments('-DSAPF_MANTA', language: 'cpp')
 endif
 
-# TODO: flag to include test or not?
-
+# testing is disabled in the release exe
 exe = executable(
   'sapf',
+  sources,
+  include_directories: [include_directories('include')],
+  dependencies: deps,
+  cpp_args : cpp_args + ['-DDOCTEST_CONFIG_DISABLE'],
+  link_args : link_args
+)
+
+# exe with testing enabled
+testable_exe = executable(
+  'sapf_testable',
   sources,
   include_directories: [include_directories('include')],
   dependencies: deps,
@@ -130,4 +137,4 @@ exe = executable(
   link_args : link_args
 )
 
-test('test all', exe, args: ['--exit'])
+test('test all', testable_exe, args: ['--exit'])
