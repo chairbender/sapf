@@ -42,6 +42,11 @@ deps = []
 cpp_args = ['-std=c++17']
 link_args = []
 
+# tests
+doctest_dep = dependency('doctest')
+# TODO: Only do this when not building a production release
+deps += doctest_dep
+
 # libedit
 if host_machine.system() == 'windows'
     deps += dependency('readline', required: true)
@@ -112,7 +117,9 @@ if get_option('manta')
   add_project_arguments('-DSAPF_MANTA', language: 'cpp')
 endif
 
-executable(
+# TODO: flag to include test or not?
+
+exe = executable(
   'sapf',
   sources,
   include_directories: [include_directories('include')],
@@ -121,8 +128,4 @@ executable(
   link_args : link_args
 )
 
-# tests
-# gtest - using wrap
-test_exe = executable('test_hello', 'test/test_MathOps.cpp')
-
-test('test_hello', test_exe)
+test('test all', exe, args: ['--exit'])

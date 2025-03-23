@@ -29,12 +29,22 @@ for installing dependencies, you can refer to the CI scripts in this repo:
 - [install-macos-deps.sh](.github/scripts/install-macos-deps.sh) (macOS with Homebrew)
 
 ## running tests
-Tests are located in `test/` and are written using doctest (which is included and doesn't need to be obtained separately).
+Tests are located in `test/` and are written using doctest (which is obtained via a wrap)
 See [the doctest documentation](https://github.com/doctest/doctest/tree/master?tab=readme-ov-file#documentation) for more details.
 
+The test are inline with the production code. There is not a separate "test exe" - testing is done simply by building
+the main exe with testing enabled, and running it (you can find the logic for this at the beginning of main()). Passing
+`--exit` ensures it exists after testing. Otherwise, it will run the tests, and then run the main program like normal.
+You can pass other doctest-specific command line arguments and they will be forwarded to doctest.
+
+You can still use meson test to run the tests:
 ```shell
-meson test -C build
+meson test --print-errorlogs -C build
 ```
+Without `--print-errorlogs` you'll need to view the testlog.txt to see the actual failing test cases.
+
+Note there is currently a feature request for doctest for better integration 
+with meson but it is not yet implemented ATTOW: https://github.com/doctest/doctest/issues/531
 
 ## Windows Usage Caveats
 

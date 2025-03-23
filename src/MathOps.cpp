@@ -23,6 +23,7 @@
 #else
 // TODO
 #endif
+#include "doctest.h"
 
 
 
@@ -1020,6 +1021,17 @@ DEFINE_BINOP_FLOATVV1(nextafter, nextafter(a, b), vvnextafter(out, const_cast<Z*
 	BinaryOp* gBinaryOpPtr_plus = &gBinaryOp_plus;
 	BINARY_OP_PRIM(plus)
 
+	TEST_CASE("BinaryOp_plus loopz basic") {
+		double aa[] = {1, 2, 3};
+		double bb[] = {1, 2, 3};
+		double out[3];
+		double expected[] = {2, 4, 6};
+		gBinaryOp_plus.loopz(3, aa, 1, bb, 1, out);
+
+		for (int i = 0; i < 3; ++i) {
+			CHECK(out[i] == doctest::Approx(expected[i]).epsilon(1e-9));
+		}
+	}
 
 	struct BinaryOp_plus_link : public BinaryOp {
 		virtual const char *Name() { return "plus"; }
