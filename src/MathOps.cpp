@@ -1054,7 +1054,7 @@ DEFINE_BINOP_FLOATVV1(nextafter, nextafter(a, b), vvnextafter(out, const_cast<Z*
 		double out[3];
 
 		SUBCASE("stride 1") {
-			double expected[] = {5, 7, 10};
+			double expected[] = {5, 7, 9};
 			gBinaryOp_plus.loopz(3, aa, 1, bb, 1, out);
 
 			for (int i = 0; i < 3; ++i) {
