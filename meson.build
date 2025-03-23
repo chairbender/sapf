@@ -43,9 +43,10 @@ cpp_args = ['-std=c++17']
 link_args = []
 
 # tests
-doctest_dep = dependency('doctest')
+doctest_dep = dependency('doctest', required: true)
 # TODO: Only do this when not building a production release
 deps += doctest_dep
+
 
 # libedit
 if host_machine.system() == 'windows'
@@ -66,6 +67,7 @@ if get_option('accelerate')
   add_project_arguments('-DSAPF_ACCELERATE', language: 'cpp')
 else
   deps += dependency('fftw3', required: true, version: '>=3')
+  deps += dependency('eigen3', required: true)
 endif
 
 if get_option('apple_lock')

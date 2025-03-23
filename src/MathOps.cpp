@@ -24,6 +24,7 @@
 // TODO
 #endif
 #include "doctest.h"
+#include <Eigen/Dense>
 
 
 
@@ -952,6 +953,22 @@ DEFINE_BINOP_FLOAT_STRING(cmp,  sc_cmp(a, b), sc_sgn(strcmp(a, b)))
 DEFINE_BINOP_FLOATVV1(copysign, copysign(a, b), vvcopysign(out, const_cast<Z*>(aa), bb, &n)) // bug in vForce.h requires const_cast
 DEFINE_BINOP_FLOATVV1(nextafter, nextafter(a, b), vvnextafter(out, const_cast<Z*>(aa), bb, &n)) // bug in vForce.h requires const_cast
 
+using namespace Eigen;
+
+#if SAMPLE_IS_DOUBLE
+	typedef Map<VectorXd, 0, InnerStride<>> ZVec;
+#else
+	typedef Map<VectorXf, 0, InnerStride<>> ZVec;
+#endif
+
+ZVec zvec(const Z *vec, int n, int stride) {
+	#if SAMPLE_IS_DOUBLE
+		return ZVec((double *)vec, n, InnerStride<>(stride));
+	#else
+		return ZVec((float *)vec, n, InnerStride<>(stride));
+	#endif
+}
+
 // identity optimizations of basic operators.
 
 	struct BinaryOp_plus : public BinaryOp {
@@ -966,29 +983,37 @@ DEFINE_BINOP_FLOATVV1(nextafter, nextafter(a, b), vvnextafter(out, const_cast<Z*
 #ifdef SAPF_ACCELERATE
 					vDSP_vsaddD(const_cast<Z*>(bb), bstride, const_cast<Z*>(aa), out, 1, n);
 #else
-                                        LOOP(i,n) { Z b = *bb; Z a = *aa; out[i] = b + a; bb += bstride; }
+					vecop(aa, n, astride, bb, bstride, out);
 #endif // SAPF_ACCELERATE
 				}
 			} else if (bstride == 0 ) {
 				if (*bb == 0.) {
 					memcpy(out, aa, n * sizeof(Z));
-					//LOOP(i,n) { out[i] = *aa; aa += bstride; }
 				} else {
 #ifdef SAPF_ACCELERATE
 					vDSP_vsaddD(const_cast<Z*>(aa), astride, const_cast<Z*>(bb), out, 1, n);
 #else
-                                        LOOP(i,n) { Z a = *aa; Z b = *bb; out[i] = a + b; aa += astride; }
+                    vecop(aa, n, astride, bb, bstride, out);
 #endif // SAPF_ACCELERATE
 				}
 			} else {
 #ifdef SAPF_ACCELERATE
 				vDSP_vaddD(aa, astride, bb, bstride, out, 1, n);
 #else
-				LOOP(i,n) { Z a = *aa; Z b = *bb; out[i] = a + b; aa += astride; bb += bstride; }
+					vecop(aa, n, astride, bb, bstride, out);
 #endif // SAPF_ACCELERATE
 			}
-		}
-		virtual void pairsz(int n, Z& z, Z *aa, int astride, Z *out) {
+        }
+		#ifndef SAPF_ACCELERATE
+			void vecop(const Z *aa, int n, int astride, const Z *bb, int bstride, Z *out)
+			{
+				const ZVec A = zvec(aa, n, astride);
+				const ZVec B = zvec(bb, n, bstride);
+				ZVec R = zvec(out, n, 1);
+				R = A + B;
+			}
+		#endif
+        virtual void pairsz(int n, Z& z, Z *aa, int astride, Z *out) {
 			Z b = z;
 			LOOP(i,n) { Z a = *aa; out[i] = a + b; b = a; aa += astride; }
 			z = b;
@@ -1035,7 +1060,7 @@ DEFINE_BINOP_FLOATVV1(nextafter, nextafter(a, b), vvnextafter(out, const_cast<Z*
 			}
 		}
 
-		SUBCASE("0 stepsize") {
+		SUBCASE("0 stride") {
 			double expected[] = {2, 2, 2};
 			gBinaryOp_plus.loopz(3, aa, 0, bb, 0, out);
 
@@ -1044,7 +1069,7 @@ DEFINE_BINOP_FLOATVV1(nextafter, nextafter(a, b), vvnextafter(out, const_cast<Z*
 			}
 		}
 
-		SUBCASE("mismatch stepsize") {
+		SUBCASE("mismatch stride") {
 			double expected[] = {2, 3, 4};
 			gBinaryOp_plus.loopz(3, aa, 1, bb, 0, out);
 
