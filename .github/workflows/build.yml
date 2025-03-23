@@ -27,10 +27,11 @@ jobs:
             mingw-w64-ucrt-x86_64-pkgconf
             mingw-w64-ucrt-x86_64-rtaudio
             mingw-w64-ucrt-x86_64-readline
+            mingw-w64-ucrt-x86_64-ca-certificates
       - name: CI-Build
         run: |
-          echo 'Running in MSYS2!'
           meson setup build
+          meson test --print-errorlogs -C build
           meson compile -C build
       - name: Save Build Log Artifact
         if: ${{ always() }}
@@ -58,6 +59,9 @@ jobs:
 
     - name: Setup
       run: meson setup build
+
+    - name: Test
+      run: meson test --print-errorlogs -C build
 
     - name: Compile
       run: meson compile -C build

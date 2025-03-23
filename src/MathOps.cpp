@@ -802,7 +802,6 @@ struct UnaryOp_ToZero : public UnaryOp {
 };
 UnaryOp_ToZero gUnaryOp_ToZero; 
 
-// TODO: vectorized replacements for floatvv binops/unops
 DEFINE_UNOP_FLOATVV2(neg, -a, vDSP_vnegD(const_cast<Z*>(aa), astride, out, 1, n))
 DEFINE_UNOP_FLOAT(sgn, sc_sgn(a))
 
@@ -891,7 +890,6 @@ static void sc_clipv(int n, const Z* in, Z* out, Z a, Z b)
 	}
 }
 
-// TODO: vectorized replacements for floatvv binops/unops
 DEFINE_UNOP_FLOATVV2(inc, a+1, Z b = 1.; vDSP_vsaddD(const_cast<Z*>(aa), astride, &b, out, 1, n))
 DEFINE_UNOP_FLOATVV2(dec, a-1, Z b = -1.; vDSP_vsaddD(const_cast<Z*>(aa), astride, &b, out, 1, n))
 DEFINE_UNOP_FLOATVV2(half, a*.5, Z b = .5; vDSP_vsmulD(aa, astride, &b, out, 1, n))
@@ -922,8 +920,6 @@ DEFINE_UNOP_FLOAT(ratiocents, sc_ratiocents(a))
 DEFINE_UNOP_FLOAT(semiratio, sc_semiratio(a))
 DEFINE_UNOP_FLOAT(ratiosemi, sc_ratiosemi(a))
 
-
-// TODO: vectorized replacements for floatvv binops/unops
 DEFINE_UNOP_FLOATVV2(degrad, a*kDegToRad, Z b = kDegToRad; vDSP_vsmulD(aa, astride, &b, out, 1, n))
 DEFINE_UNOP_FLOATVV2(raddeg, a*kRadToDeg, Z b = kRadToDeg; vDSP_vsmulD(aa, astride, &b, out, 1, n))
 DEFINE_UNOP_FLOATVV2(minsec, a*kMinToSecs, Z b = kMinToSecs; vDSP_vsmulD(aa, astride, &b, out, 1, n))
@@ -1645,7 +1641,6 @@ DEFINE_BINOP_FLOAT(remainder, remainder(a, b))
 DEFINE_BINOP_INT(idiv, sc_div(a, b))
 DEFINE_BINOP_INT(imod, sc_imod(a, b))
 
-// TODO: vectorized replacements for floatvv binops
 DEFINE_BINOP_FLOATVV1(pow, sc_pow(a, b), vvpow(out, bb, aa, &n))
 DEFINE_BINOP_FLOATVV1(atan2, atan2(a, b), vvatan2(out, aa, bb, &n))
 
@@ -1657,8 +1652,6 @@ DEFINE_BINOP_FLOATVV1(atan2, atan2(a, b), vvatan2(out, aa, bb, &n))
 	DEFINE_BINOP_FLOAT(Yn, yn((int)b, a))
 #endif
 
-
-// TODO: vectorized replacements for floatvv binops
 DEFINE_BINOP_FLOATVV(min, fmin(a, b), vDSP_vminD(const_cast<Z*>(aa), astride, const_cast<Z*>(bb), bstride, out, 1, n))
 DEFINE_BINOP_FLOATVV(max, fmax(a, b), vDSP_vmaxD(const_cast<Z*>(aa), astride, const_cast<Z*>(bb), bstride, out, 1, n))
 DEFINE_BINOP_FLOAT(dim, fdim(a, b))
