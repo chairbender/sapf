@@ -11,10 +11,13 @@ a Nix flake is included. simply run:
 ```shell
 nix develop
 meson setup build
-meson compile -C build
+meson compile sapf -C build
 ```
 
 and you should get a binary at `./build/sapf`.
+
+It's important to specify `compile sapf`. Previously you could run `meson compile -C build`, but now we have multiple targets and not all of them are buildable on
+a given system - the `sapf` target will build for your native system. You can substitute `sapf` for other targets such as `sapf_x86_64_v3` (check meson.build).
 
 if not using Nix, you will need to install dependencies manually instead of the `nix develop`. the mandatory dependencies for a portable build are currently:
 
@@ -39,9 +42,11 @@ You can pass other doctest-specific command line arguments and they will be forw
 
 You can still use meson test to run the tests:
 ```shell
-meson test --print-errorlogs -C build
+meson test unoptimized --print-errorlogs -C build
 ```
 Without `--print-errorlogs` you'll need to view the testlog.txt to see the actual failing test cases.
+The `unoptimized` tests the unoptimized version of the exe (which means it should build more quickly).
+Susbtitute with `optimized` to test the optimized (-O3, -march=native) version of the exe.
 
 Note there is currently a feature request for doctest for better integration 
 with meson but it is not yet implemented ATTOW: https://github.com/doctest/doctest/issues/531
@@ -88,7 +93,7 @@ Navigate to the root directory of this repo.
 6.  ```shell
     # remove --buildtype debug to build without debug symbols
     meson setup --buildtype debug build 
-    meson compile -C build
+    meson compile sapf -C build
     ```
 7. You should see `sapf.exe` is created under the `${workspaceFolder}/build` directory.
 8. You need all the required DLLs in order to run it via Windows. Go to your msys2 folder `C:\msys64\ucrt64\bin`

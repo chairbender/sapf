@@ -32,8 +32,8 @@ jobs:
       - name: CI-Build
         run: |
           meson setup build
-          meson test --print-errorlogs -C build
-          meson compile -C build
+          meson test optimized --print-errorlogs -C build
+          meson compile sapf_x86_64_v3 -C build
       - name: Save Build Log Artifact
         if: ${{ always() }}
         uses: actions/upload-artifact@v4
@@ -62,10 +62,15 @@ jobs:
       run: meson setup build
 
     - name: Test
-      run: meson test --print-errorlogs -C build
+      run: meson test optimized --print-errorlogs -C build
 
-    - name: Compile
-      run: meson compile -C build
+    - name: Compile M1
+      if: runner.os == 'macOS'
+      run: meson compile sapf_arm_m1 -C build
+
+    - name: Compile Linux x86
+      if: runner.os != 'macOS'
+      run: meson compile sapf_x86_64_v3 -C build
 
     - name: Save Build Log Artifact
       if: ${{ always() }}

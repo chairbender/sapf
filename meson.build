@@ -117,19 +117,79 @@ if get_option('manta')
   add_project_arguments('-DSAPF_MANTA', language: 'cpp')
 endif
 
+
+
 # testing is disabled in the release exe
-exe = executable(
+release_cpp_args = cpp_args + ['-DOCTEST_CONFIG_DISABLE', '-O3']
+
+# build targeting the native system this was built on, with optimizations (this is what people 
+# building on their own machine should use for optimal performance)
+executable(
   'sapf',
   sources,
   include_directories: [include_directories('include')],
   dependencies: deps,
-  cpp_args : cpp_args + ['-DDOCTEST_CONFIG_DISABLE'],
+  cpp_args : release_cpp_args + ['-march=native'],
   link_args : link_args
 )
 
-# exe with testing enabled
-testable_exe = executable(
-  'sapf_testable',
+# The below builds target specific architectures. Because this program uses
+# SIMD, the best performance is achieved when a user uses the most recent architecture supported
+# by their CPU. Users will get the best results if they build the library themselves however (exe_native).
+
+# should have maximum compatibility with ancient x86_64 cpus
+executable(
+  'sapf_x86_64',
+  sources,
+  include_directories: [include_directories('include')],
+  dependencies: deps,
+  cpp_args : release_cpp_args + ['-march=x86-64'],
+  link_args : link_args
+)
+
+# for somewhat older x86 CPUs (2008ish)
+executable(
+  'sapf_x86_64_v2',
+  sources,
+  include_directories: [include_directories('include')],
+  dependencies: deps,
+  cpp_args : release_cpp_args + ['-march=x86-64-v2'],
+  link_args : link_args
+)
+
+# for more cutting edge x86 cpus
+executable(
+  'sapf_x86_64_v3',
+  sources,
+  include_directories: [include_directories('include')],
+  dependencies: deps,
+  cpp_args : release_cpp_args + ['-march=x86-64-v3'],
+  link_args : link_args
+)
+
+# support M1 chip and newer
+executable(
+  'sapf_arm_m1',
+  sources,
+  include_directories: [include_directories('include')],
+  dependencies: deps,
+  cpp_args : release_cpp_args + ['-march=armv8.4-a', '-mcpu=apple-m1'],
+  link_args : link_args
+)
+
+# support M3 chip
+executable(
+  'sapf_arm_m3',
+  sources,
+  include_directories: [include_directories('include')],
+  dependencies: deps,
+  cpp_args : release_cpp_args + ['-march=armv8.5-a', '-mcpu=apple-m3'],
+  link_args : link_args
+)
+
+# exe with testing enabled without optimizations
+testable_exe_native_unoptimized = executable(
+  'sapf_unoptimized_testable',
   sources,
   include_directories: [include_directories('include')],
   dependencies: deps,
@@ -137,4 +197,16 @@ testable_exe = executable(
   link_args : link_args
 )
 
-test('test all', testable_exe, args: ['--exit'])
+# exe with testing enabled with all optimizations for the native system
+testable_exe_native_optimized = executable(
+  'sapf_optimized_testable',
+  sources,
+  include_directories: [include_directories('include')],
+  dependencies: deps,
+  cpp_args : cpp_args + ['-O3', '-march=native'],
+  link_args : link_args
+)
+
+# tests for different optimization levels
+test('unoptimized', testable_exe_native_unoptimized, args: ['--exit'])
+test('optimized', testable_exe_native_optimized, args: ['--exit'])
