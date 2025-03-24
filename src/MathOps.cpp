@@ -1046,12 +1046,10 @@ DEFINE_BINOP_FLOATVV1(nextafter, nextafter(a, b), vvnextafter(out, const_cast<Z*
 	BinaryOp* gBinaryOpPtr_plus = &gBinaryOp_plus;
 	BINARY_OP_PRIM(plus)
 
-	#ifndef DOCTEST_CONFIG_DISABLE
-		#define CHECK_ARR(expected, actual, n) \
-		do { \
-			LOOP(i,n) { CHECK(out[i] == doctest::Approx(expected[i]).epsilon(1e-9)); } \
-		} while (0)
-	#endif
+	#define CHECK_ARR(expected, actual, n) \
+	do { \
+		LOOP(i,n) { CHECK(out[i] == doctest::Approx(expected[i]).epsilon(1e-9)); } \
+	} while (0)
 
 	TEST_CASE("BinaryOp_plus loopz") {
 		double aa[] = {1, 2, 3};
