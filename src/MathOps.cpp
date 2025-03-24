@@ -886,7 +886,12 @@ DEFINE_UNOP_INT(toupper, toupper((int)a))
 	DEFINE_UNOP_BOOL_INT(toascii, toascii((int)a))
 #endif
 
-DEFINE_UNOP_FLOATVV2(frac, a - floor(a), vvfloor(out, aa, &n); vDSP_vsubD(out, 1, aa, astride, out, 1, n))
+DEFINE_UNOP_FLOATVV3(frac, a - floor(a), A - A.floor())
+
+TEST_CASE("frac loopz") {
+	check_unop_loopz(gUnaryOp_frac, {1.1, 2.2, 3.3}, {0.1, 0.2, 0.3});
+}
+
 DEFINE_UNOP_FLOATVV(floor, floor(a), vvfloor)
 DEFINE_UNOP_FLOATVV(ceil, ceil(a), vvceil)
 DEFINE_UNOP_FLOATVV(rint, rint(a), vvnint)
