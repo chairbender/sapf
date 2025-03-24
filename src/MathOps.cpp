@@ -803,6 +803,16 @@ struct UnaryOp_ToZero : public UnaryOp {
 UnaryOp_ToZero gUnaryOp_ToZero; 
 
 DEFINE_UNOP_FLOATVV2(neg, -a, vDSP_vnegD(const_cast<Z*>(aa), astride, out, 1, n))
+
+TEST_CASE("neg loopz") {
+	double aa[] = {1, 2, 3};
+	double out[3];
+
+	gUnaryOp_neg.loopz(3, aa, 1, out);
+
+	LOOP(i,n) { CHECK(out[i] == doctest::Approx(expected[i]).epsilon(1e-9)); }
+}
+
 DEFINE_UNOP_FLOAT(sgn, sc_sgn(a))
 
 DEFINE_UNOP_FLOATVV(abs, fabs(a), vvfabs)
