@@ -440,6 +440,35 @@ static void DoIReduce(Thread& th, BinaryOp* op)
 	UnaryOp* gUnaryOpPtr_##NAME = &gUnaryOp_##NAME; \
 	UNARY_OP_PRIM(NAME)
 #else
+#if SAMPLE_IS_DOUBLE
+	typedef Eigen::Map<Eigen::ArrayXd, 0, Eigen::InnerStride<>> ZArr;
+#else
+	typedef Eigen::Map<Eigen::ArrayXf, 0, Eigen::InnerStride<>> ZArr;
+#endif
+
+ZArr zarr(const Z *vec, int n, int stride) {
+	#if SAMPLE_IS_DOUBLE
+		return ZArr((double *)vec, n, Eigen::InnerStride<>(stride));
+	#else
+		return ZArr((float *)vec, n, Eigen::InnerStride<>(stride));
+	#endif
+}
+
+#define ZARR_BINOP(op, n, aa, astride, bb, bstride, out) \
+	do { \
+		const ZArr A = zarr(aa, n, astride); \
+		const ZArr B = zarr(bb, n, bstride); \
+		ZArr R = zarr(out, n, 1); \
+		R = op; \
+	} while (0)
+
+#define ZARR_UNOP(op, n, aa, astride, out) \
+	do { \
+		const ZArr A = zarr(aa, n, astride); \
+		ZArr R = zarr(out, n, 1); \
+		R = op; \
+	} while (0)
+
 #define DEFINE_UNOP_FLOATVV(NAME, CODE, VVNAME) \
 	struct UnaryOp_##NAME : public UnaryOp { \
 		virtual const char *Name() { return #NAME; } \
@@ -458,6 +487,22 @@ static void DoIReduce(Thread& th, BinaryOp* op)
 		virtual double op(double a) { return CODE; } \
 		virtual void loopz(int n, const Z *aa, int astride, Z *out) { \
 			LOOP(i,n) { Z a = *aa; out[i] = CODE; aa += astride; } \
+		} \
+	}; \
+	UnaryOp_##NAME gUnaryOp_##NAME; \
+	UnaryOp* gUnaryOpPtr_##NAME = &gUnaryOp_##NAME; \
+	UNARY_OP_PRIM(NAME)
+
+#define DEFINE_UNOP_FLOATVV3(NAME, CODE, OP) \
+	struct UnaryOp_##NAME : public UnaryOp { \
+		virtual const char *Name() { return #NAME; } \
+		virtual double op(double a) { return CODE; } \
+		virtual void loopz(int n, const Z *aa, int astride, Z *out) { \
+			if (astride == 1) { \
+				ZARR_UNOP(OP, n, aa, astride, out); \
+			} else { \
+				LOOP(i,n) { Z a = *aa; out[i] = CODE; aa += astride; } \
+			} \
 		} \
 	}; \
 	UnaryOp_##NAME gUnaryOp_##NAME; \
@@ -802,8 +847,6 @@ struct UnaryOp_ToZero : public UnaryOp {
 };
 UnaryOp_ToZero gUnaryOp_ToZero; 
 
-DEFINE_UNOP_FLOATVV2(neg, -a, vDSP_vnegD(const_cast<Z*>(aa), astride, out, 1, n))
-
 #ifndef DOCTEST_CONFIG_DISABLE
 	#define CHECK_ARR(expected, actual, n) \
 	do { \
@@ -816,6 +859,8 @@ DEFINE_UNOP_FLOATVV2(neg, -a, vDSP_vnegD(const_cast<Z*>(aa), astride, out, 1, n)
 		CHECK_ARR(expected.data(), out, 3);
 	}
 #endif
+
+DEFINE_UNOP_FLOATVV3(neg, -a, A * -1)
 
 TEST_CASE("neg loopz") {
 	check_unop_loopz(gUnaryOp_neg, {1, 2, 3}, {-1, -2, -3});
@@ -971,30 +1016,6 @@ DEFINE_BINOP_FLOAT_STRING(cmp,  sc_cmp(a, b), sc_sgn(strcmp(a, b)))
 DEFINE_BINOP_FLOATVV1(copysign, copysign(a, b), vvcopysign(out, const_cast<Z*>(aa), bb, &n)) // bug in vForce.h requires const_cast
 DEFINE_BINOP_FLOATVV1(nextafter, nextafter(a, b), vvnextafter(out, const_cast<Z*>(aa), bb, &n)) // bug in vForce.h requires const_cast
 
-#ifndef SAPF_ACCELERATE
-
-	#if SAMPLE_IS_DOUBLE
-		typedef Eigen::Map<Eigen::ArrayXd, 0, Eigen::InnerStride<>> ZArr;
-	#else
-		typedef Eigen::Map<Eigen::ArrayXf, 0, Eigen::InnerStride<>> ZArr;
-	#endif
-
-	ZArr zarr(const Z *vec, int n, int stride) {
-		#if SAMPLE_IS_DOUBLE
-			return ZArr((double *)vec, n, Eigen::InnerStride<>(stride));
-		#else
-			return ZArr((float *)vec, n, Eigen::InnerStride<>(stride));
-		#endif
-	}
-
-	#define ZARR_OP(op, n, aa, astride, bb, bstride, out) \
-		do { \
-			const ZArr A = zarr(aa, n, astride); \
-			const ZArr B = zarr(bb, n, bstride); \
-			ZArr R = zarr(out, n, 1); \
-			R = op; \
-		} while (0)
-#endif
 
 // identity optimizations of basic operators.
 
@@ -1010,7 +1031,7 @@ DEFINE_BINOP_FLOATVV1(nextafter, nextafter(a, b), vvnextafter(out, const_cast<Z*
 #ifdef SAPF_ACCELERATE
 					vDSP_vsaddD(const_cast<Z*>(bb), bstride, const_cast<Z*>(aa), out, 1, n);
 #else
-					ZARR_OP(A + B, n, aa, astride, bb, bstride, out);
+					ZARR_BINOP(A + B, n, aa, astride, bb, bstride, out);
 #endif // SAPF_ACCELERATE
 				}
 			} else if (bstride == 0 ) {
@@ -1020,14 +1041,14 @@ DEFINE_BINOP_FLOATVV1(nextafter, nextafter(a, b), vvnextafter(out, const_cast<Z*
 #ifdef SAPF_ACCELERATE
 					vDSP_vsaddD(const_cast<Z*>(aa), astride, const_cast<Z*>(bb), out, 1, n);
 #else
-                    ZARR_OP(A + B, n, aa, astride, bb, bstride, out);
+                    ZARR_BINOP(A + B, n, aa, astride, bb, bstride, out);
 #endif // SAPF_ACCELERATE
 				}
 			} else {
 #ifdef SAPF_ACCELERATE
 				vDSP_vaddD(aa, astride, bb, bstride, out, 1, n);
 #else
-					ZARR_OP(A + B, n, aa, astride, bb, bstride, out);
+					ZARR_BINOP(A + B, n, aa, astride, bb, bstride, out);
 #endif // SAPF_ACCELERATE
 			}
         }
@@ -1127,7 +1148,7 @@ DEFINE_BINOP_FLOATVV1(nextafter, nextafter(a, b), vvnextafter(out, const_cast<Z*
 #ifdef SAPF_ACCELERATE
 					vDSP_vsaddD(const_cast<Z*>(bb), bstride, const_cast<Z*>(aa), out, 1, n);
 #else
-					ZARR_OP(A + B, n, aa, astride, bb, bstride, out);
+					ZARR_BINOP(A + B, n, aa, astride, bb, bstride, out);
 #endif // SAPF_ACCELERATE
 				}
 			} else if (bstride == 0 ) {
@@ -1138,14 +1159,14 @@ DEFINE_BINOP_FLOATVV1(nextafter, nextafter(a, b), vvnextafter(out, const_cast<Z*
 #ifdef SAPF_ACCELERATE
 					vDSP_vsaddD(const_cast<Z*>(aa), astride, const_cast<Z*>(bb), out, 1, n);
 #else
-					ZARR_OP(A + B, n, aa, astride, bb, bstride, out);
+					ZARR_BINOP(A + B, n, aa, astride, bb, bstride, out);
 #endif // SAPF_ACCELERATE
 				}
 			} else {
 #ifdef SAPF_ACCELERATE
 				vDSP_vaddD(aa, astride, bb, bstride, out, 1, n);
 #else
-				ZARR_OP(A + B, n, aa, astride, bb, bstride, out);
+				ZARR_BINOP(A + B, n, aa, astride, bb, bstride, out);
 #endif // SAPF_ACCELERATE
 			}
 		}
@@ -1240,13 +1261,13 @@ DEFINE_BINOP_FLOATVV1(nextafter, nextafter(a, b), vvnextafter(out, const_cast<Z*
 #ifdef SAPF_ACCELERATE
 				vDSP_vnegD(const_cast<Z*>(bb), bstride, out, 1, n);
 #else
-				ZARR_OP(A - B, n, aa, astride, bb, bstride, out);
+				ZARR_BINOP(A - B, n, aa, astride, bb, bstride, out);
 #endif // SAPF_ACCELERATE
 				if (*aa != 0.) {
 #ifdef SAPF_ACCELERATE
 					vDSP_vsaddD(const_cast<Z*>(out), 1, const_cast<Z*>(aa), out, 1, n);
 #else
-					ZARR_OP(A - B, n, aa, astride, bb, bstride, out);
+					ZARR_BINOP(A - B, n, aa, astride, bb, bstride, out);
 #endif // SAPF_ACCELERATE
 				}
 			} else if (bstride == 0 ) {
@@ -1256,14 +1277,14 @@ DEFINE_BINOP_FLOATVV1(nextafter, nextafter(a, b), vvnextafter(out, const_cast<Z*
 #ifdef SAPF_ACCELERATE
 					vDSP_vsaddD(const_cast<Z*>(out), 1, &b, out, 1, n);
 #else
-					ZARR_OP(A - B, n, aa, astride, bb, bstride, out);
+					ZARR_BINOP(A - B, n, aa, astride, bb, bstride, out);
 #endif // SAPF_ACCELERATE
 				}
 			} else {
 #ifdef SAPF_ACCELERATE
 				vDSP_vsubD(aa, astride, bb, bstride, out, 1, n);
 #else
-				ZARR_OP(A - B, n, aa, astride, bb, bstride, out);
+				ZARR_BINOP(A - B, n, aa, astride, bb, bstride, out);
 #endif // SAPF_ACCELERATE
 			}
 		}
@@ -1364,7 +1385,7 @@ DEFINE_BINOP_FLOATVV1(nextafter, nextafter(a, b), vvnextafter(out, const_cast<Z*
 #ifdef SAPF_ACCELERATE
 					vDSP_vsmulD(bb, bstride, aa, out, 1, n);
 #else
-					ZARR_OP(A * B, n, aa, astride, bb, bstride, out);
+					ZARR_BINOP(A * B, n, aa, astride, bb, bstride, out);
 #endif // SAPF_ACCELERATE
 				}
 			} else if (bstride == 0) {
@@ -1376,14 +1397,14 @@ DEFINE_BINOP_FLOATVV1(nextafter, nextafter(a, b), vvnextafter(out, const_cast<Z*
 #ifdef SAPF_ACCELERATE
 					vDSP_vsmulD(aa, astride, bb, out, 1, n);
 #else
-                    ZARR_OP(A * B, n, aa, astride, bb, bstride, out);
+                    ZARR_BINOP(A * B, n, aa, astride, bb, bstride, out);
 #endif // SAPF_ACCELERATE
 				}
 			} else {
 #ifdef SAPF_ACCELERATE
 				vDSP_vmulD(aa, astride, bb, bstride, out, 1, n);
 #else
-				ZARR_OP(A * B, n, aa, astride, bb, bstride, out);
+				ZARR_BINOP(A * B, n, aa, astride, bb, bstride, out);
 #endif // SAPF_ACCELERATE
 			}
 		}
@@ -1501,14 +1522,14 @@ DEFINE_BINOP_FLOATVV1(nextafter, nextafter(a, b), vvnextafter(out, const_cast<Z*
 #ifdef SAPF_ACCELERATE
 					vDSP_vsmulD(const_cast<Z*>(aa), astride, &rb, out, 1, n);
 #else
-                    ZARR_OP(A / B, n, aa, astride, bb, bstride, out);
+                    ZARR_BINOP(A / B, n, aa, astride, bb, bstride, out);
 #endif // SAPF_ACCELERATE
 				}
 			} else {
 #ifdef SAPF_ACCELERATE
 				vDSP_vdivD(const_cast<Z*>(bb), bstride, const_cast<Z*>(aa), astride, out, 1, n);
 #else
-                 ZARR_OP(A / B, n, aa, astride, bb, bstride, out);
+                 ZARR_BINOP(A / B, n, aa, astride, bb, bstride, out);
 #endif // SAPF_ACCELERATE
 			}
 		}
