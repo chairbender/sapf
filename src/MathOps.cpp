@@ -1046,6 +1046,7 @@ DEFINE_BINOP_FLOATVV1(nextafter, nextafter(a, b), vvnextafter(out, const_cast<Z*
 	BinaryOp* gBinaryOpPtr_plus = &gBinaryOp_plus;
 	BINARY_OP_PRIM(plus)
 
+#ifndef DOCTEST_CONFIG_DISABLE
 	#define CHECK_ARR(expected, actual, n) \
 	do { \
 		LOOP(i,n) { CHECK(out[i] == doctest::Approx(expected[i]).epsilon(1e-9)); } \
@@ -1099,6 +1100,7 @@ DEFINE_BINOP_FLOATVV1(nextafter, nextafter(a, b), vvnextafter(out, const_cast<Z*
 			CHECK_ARR(expected, out, 3);
 		}
 	}
+#endif
 
 	struct BinaryOp_plus_link : public BinaryOp {
 		virtual const char *Name() { return "plus"; }
@@ -1167,6 +1169,7 @@ DEFINE_BINOP_FLOATVV1(nextafter, nextafter(a, b), vvnextafter(out, const_cast<Z*
 	BinaryOp* gBinaryOpPtr_plus_link = &gBinaryOp_plus_link;
 	BINARY_OP_PRIM(plus_link)
 
+#ifndef DOCTEST_CONFIG_DISABLE
 	TEST_CASE("BinaryOp_plus loopz") {
 		double aa[] = {1, 2, 3};
 		double bb[] = {4, 5, 6};
@@ -1215,7 +1218,7 @@ DEFINE_BINOP_FLOATVV1(nextafter, nextafter(a, b), vvnextafter(out, const_cast<Z*
 			CHECK_ARR(expected, out, 3);
 		}
 	}
-
+#endif
 
 	struct BinaryOp_minus : public BinaryOp {
 		virtual const char *Name() { return "minus"; }
@@ -1286,6 +1289,7 @@ DEFINE_BINOP_FLOATVV1(nextafter, nextafter(a, b), vvnextafter(out, const_cast<Z*
 	BinaryOp* gBinaryOpPtr_minus = &gBinaryOp_minus;
 	BINARY_OP_PRIM(minus)
 
+#ifndef DOCTEST_CONFIG_DISABLE
 	TEST_CASE("BinaryOp_minus loopz") {
 		double aa[] = {1, 2, 3};
 		double bb[] = {4, 5, 6};
@@ -1334,7 +1338,7 @@ DEFINE_BINOP_FLOATVV1(nextafter, nextafter(a, b), vvnextafter(out, const_cast<Z*
 			CHECK_ARR(expected, out, 3);
 		}
 	}
-
+#endif
 
 	struct BinaryOp_mul : public BinaryOp {
 		virtual const char *Name() { return "mul"; }
@@ -1422,6 +1426,7 @@ DEFINE_BINOP_FLOATVV1(nextafter, nextafter(a, b), vvnextafter(out, const_cast<Z*
 	BinaryOp* gBinaryOpPtr_mul = &gBinaryOp_mul;
 	BINARY_OP_PRIM(mul)
 
+#ifndef DOCTEST_CONFIG_DISABLE
 	TEST_CASE("BinaryOp_mul loopz") {
 		double aa[] = {1, 2, 3};
 		double bb[] = {4, 5, 6};
@@ -1470,7 +1475,7 @@ DEFINE_BINOP_FLOATVV1(nextafter, nextafter(a, b), vvnextafter(out, const_cast<Z*
 			CHECK_ARR(expected, out, 3);
 		}
 	}
-
+#endif
 
 	struct BinaryOp_div : public BinaryOp {
 		virtual const char *Name() { return "div"; }
@@ -1530,6 +1535,7 @@ DEFINE_BINOP_FLOATVV1(nextafter, nextafter(a, b), vvnextafter(out, const_cast<Z*
 	BinaryOp* gBinaryOpPtr_div = &gBinaryOp_div;
 	BINARY_OP_PRIM(div)
 
+#ifndef DOCTEST_CONFIG_DISABLE
 	TEST_CASE("BinaryOp_div loopz") {
 		double aa[] = {1, 2, 3};
 		double bb[] = {4, 5, 6};
@@ -1578,6 +1584,7 @@ DEFINE_BINOP_FLOATVV1(nextafter, nextafter(a, b), vvnextafter(out, const_cast<Z*
 			CHECK_ARR(expected, out, 3);
 		}
 	}
+#endif
 
 DEFINE_BINOP_FLOAT(mod, sc_fmod(a, b))
 DEFINE_BINOP_FLOAT(remainder, remainder(a, b))
