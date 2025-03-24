@@ -13,7 +13,8 @@ a version string. You can also confirm with `where gcc` that it's using the bina
 6. Before opening the folder in vscode, create a `.vscode` subdolder and populate it with some files. See the below "Config files" section for some example config files. Tweak the paths to match your own system.
 7. Open a cpp file to make sure the extensions activate.
 8. You should now have intellisense working (you should be able to "Go to definition" and "find references, etc...").
-9. You can now build using the Meson build task instead of msys2 shell if you prefer.
+9. You can now build using the Meson build task instead of msys2 shell if you prefer. For best
+debugging experience you probably want to build the `sapf_unoptimized_testable` target which disables optimizations.
 10. You can debug via selecting the "Attach (sapf)" configuration (bottom left), manually
 running sapf.exe, and then presing F5 and attaching to the sapf.exe process. (Currently haven't figured out
 how to get the "launch" version working - it runs but the text is garbled - likely an encoding issue).
