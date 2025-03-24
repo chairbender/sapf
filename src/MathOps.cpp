@@ -941,8 +941,21 @@ DEFINE_UNOP_FLOATVV3(rsqrt, 1./sc_sqrt(a), A.rsqrt())
 #endif
 
 DEFINE_UNOP_FLOAT(cbrt, cbrt(a))
-DEFINE_UNOP_FLOATVV2(ssq, copysign(a*a, a), vDSP_vssqD(aa, astride, out, 1, n))
-DEFINE_UNOP_FLOATVV2(sq, a*a, vDSP_vsqD(aa, astride, out, 1, n))
+
+DEFINE_UNOP_FLOATVV3(ssq, copysign(a*a, a), A.sign() * A.square())
+#ifndef DOCTEST_CONFIG_DISABLE
+	TEST_CASE("ssq loopz") {
+		check_unop_loopz(gUnaryOp_ssq, {1, -2, -3}, {1, -4, -9});
+	}
+#endif
+
+DEFINE_UNOP_FLOATVV3(sq, a*a, A.square())
+#ifndef DOCTEST_CONFIG_DISABLE
+	TEST_CASE("sq loopz") {
+		check_unop_loopz(gUnaryOp_sq, {1, -2, -3}, {1, 4, 9});
+	}
+#endif
+
 DEFINE_UNOP_FLOAT(cb, a*a*a)
 DEFINE_UNOP_FLOAT(pow4, sc_fourth(a))
 DEFINE_UNOP_FLOAT(pow5, sc_fifth(a))
@@ -951,14 +964,60 @@ DEFINE_UNOP_FLOAT(pow7, sc_seventh(a))
 DEFINE_UNOP_FLOAT(pow8, sc_eighth(a))
 DEFINE_UNOP_FLOAT(pow9, sc_ninth(a))
 
-DEFINE_UNOP_FLOATVV(exp, exp(a), vvexp)
-DEFINE_UNOP_FLOATVV(exp2, exp2(a), vvexp2)
+DEFINE_UNOP_FLOATVV3(exp, exp(a), A.exp())
+#ifndef DOCTEST_CONFIG_DISABLE
+	TEST_CASE("exp loopz") {
+		check_unop_loopz(gUnaryOp_exp, {1, 2, 3}, {exp(1), exp(2), exp(3)});
+	}
+#endif
+
+DEFINE_UNOP_FLOATVV3(exp2, exp2(a), pow(2,A))
+#ifndef DOCTEST_CONFIG_DISABLE
+	TEST_CASE("exp2 loopz") {
+		check_unop_loopz(gUnaryOp_exp2, {1, 2, 3}, {2, 4, 8});
+	}
+#endif
+
 DEFINE_UNOP_FLOAT(exp10, pow(10., a))
-DEFINE_UNOP_FLOATVV(expm1, expm1(a), vvexpm1)
-DEFINE_UNOP_FLOATVV(log, sc_log(a), vvlog)
-DEFINE_UNOP_FLOATVV(log2, sc_log2(a), vvlog2)
-DEFINE_UNOP_FLOATVV(log10, sc_log10(a), vvlog10)
-DEFINE_UNOP_FLOATVV(log1p, log1p(a), vvlog1p)
+
+DEFINE_UNOP_FLOATVV3(expm1, expm1(a), A.exp() - 1)
+#ifndef DOCTEST_CONFIG_DISABLE
+	TEST_CASE("expm1 loopz") {
+		check_unop_loopz(gUnaryOp_expm1, {1, 2, 3}, {expm1(1), expm1(2), expm1(3)});
+	}
+#endif
+
+DEFINE_UNOP_FLOATVV3(log, sc_log(a), A.log())
+#ifndef DOCTEST_CONFIG_DISABLE
+	TEST_CASE("log loopz") {
+		check_unop_loopz(gUnaryOp_log, {1, 2, 3}, {sc_log(1), sc_log(2), sc_log(3)});
+	}
+#endif
+
+DEFINE_UNOP_FLOATVV3(log2, sc_log2(a), A.log() / sc_log(2.0))
+#ifndef DOCTEST_CONFIG_DISABLE
+	TEST_CASE("log2 loopz") {
+		check_unop_loopz(gUnaryOp_log2, {1, 2, 3}, {sc_log2(1), sc_log2(2), sc_log2(3)});
+	}
+#endif
+
+DEFINE_UNOP_FLOATVV3(log10, sc_log10(a), A.log10())
+#ifndef DOCTEST_CONFIG_DISABLE
+	TEST_CASE("log10 loopz") {
+		check_unop_loopz(gUnaryOp_log10, {1, 2, 3}, {sc_log10(1), sc_log10(2), sc_log10(3)});
+	}
+#endif
+
+DEFINE_UNOP_FLOATVV3(log1p, log1p(a), A.log1p())
+#ifndef DOCTEST_CONFIG_DISABLE
+	TEST_CASE("log1p loopz") {
+		check_unop_loopz(gUnaryOp_log1p, {1, 2, 3}, {log1p(1), log1p(2), log1p(3)});
+	}
+#endif
+
+
+// Eigen doesn't provide a vectorized logb and there isn't
+// an obvious way to implement it
 DEFINE_UNOP_FLOATVV(logb, logb(a), vvlogb)
 
 DEFINE_UNOP_FLOAT(sinc, sc_sinc(a))
