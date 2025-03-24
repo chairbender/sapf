@@ -1016,8 +1016,8 @@ DEFINE_UNOP_FLOATVV3(log1p, log1p(a), A.log1p())
 #endif
 
 
-// Eigen doesn't provide a vectorized logb and there isn't
-// an obvious way to implement it
+// TODO: Eigen doesn't provide a vectorized logb. We could use XSIMD instead to implement it ourselves if
+// it's really important
 DEFINE_UNOP_FLOATVV(logb, logb(a), vvlogb)
 
 DEFINE_UNOP_FLOAT(sinc, sc_sinc(a))
