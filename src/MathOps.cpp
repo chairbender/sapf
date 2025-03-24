@@ -861,7 +861,6 @@ UnaryOp_ToZero gUnaryOp_ToZero;
 #endif
 
 DEFINE_UNOP_FLOATVV3(neg, -a, A * -1)
-
 TEST_CASE("neg loopz") {
 	check_unop_loopz(gUnaryOp_neg, {1, 2, 3}, {-1, -2, -3});
 }
@@ -869,7 +868,6 @@ TEST_CASE("neg loopz") {
 DEFINE_UNOP_FLOAT(sgn, sc_sgn(a))
 
 DEFINE_UNOP_FLOATVV3(abs, fabs(a), A.abs())
-
 TEST_CASE("abs loopz") {
 	check_unop_loopz(gUnaryOp_abs, {1, -2, 3}, {1, 2, 3});
 }
@@ -887,14 +885,25 @@ DEFINE_UNOP_INT(toupper, toupper((int)a))
 #endif
 
 DEFINE_UNOP_FLOATVV3(frac, a - floor(a), A - A.floor())
-
 TEST_CASE("frac loopz") {
 	check_unop_loopz(gUnaryOp_frac, {1.1, 2.2, 3.3}, {0.1, 0.2, 0.3});
 }
 
-DEFINE_UNOP_FLOATVV(floor, floor(a), vvfloor)
-DEFINE_UNOP_FLOATVV(ceil, ceil(a), vvceil)
-DEFINE_UNOP_FLOATVV(rint, rint(a), vvnint)
+DEFINE_UNOP_FLOATVV3(floor, floor(a), A.floor())
+TEST_CASE("floor loopz") {
+	check_unop_loopz(gUnaryOp_floor, {1.1, 2.2, 3.3}, {1, 2, 3});
+}
+
+
+DEFINE_UNOP_FLOATVV3(ceil, ceil(a), A.ceil())
+TEST_CASE("ceil loopz") {
+	check_unop_loopz(gUnaryOp_ceil, {1.1, 2.2, 3.3}, {2, 3, 4});
+}
+
+DEFINE_UNOP_FLOATVV3(rint, rint(a), A.round())
+TEST_CASE("rint loopz") {
+	check_unop_loopz(gUnaryOp_rint, {1.1, 2.2, 3.6}, {1, 2, 4});
+}
 
 DEFINE_UNOP_FLOAT(erf, erf(a))
 DEFINE_UNOP_FLOAT(erfc, erfc(a))
