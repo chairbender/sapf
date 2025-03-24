@@ -804,13 +804,21 @@ UnaryOp_ToZero gUnaryOp_ToZero;
 
 DEFINE_UNOP_FLOATVV2(neg, -a, vDSP_vnegD(const_cast<Z*>(aa), astride, out, 1, n))
 
+#ifndef DOCTEST_CONFIG_DISABLE
+	#define CHECK_ARR(expected, actual, n) \
+	do { \
+		LOOP(i,n) { CHECK(out[i] == doctest::Approx(expected[i]).epsilon(1e-9)); } \
+	} while (0)
+
+	void check_unop_loopz(UnaryOp& op, const std::array<Z, 3> aa, const std::array<Z, 3> expected) {
+		double out[3];
+		op.loopz(3, aa.data(), 1, out);
+		CHECK_ARR(expected.data(), out, 3);
+	}
+#endif
+
 TEST_CASE("neg loopz") {
-	double aa[] = {1, 2, 3};
-	double out[3];
-
-	gUnaryOp_neg.loopz(3, aa, 1, out);
-
-	LOOP(i,n) { CHECK(out[i] == doctest::Approx(expected[i]).epsilon(1e-9)); }
+	check_unop_loopz(gUnaryOp_neg, {1, 2, 3}, {-1, -2, -3});
 }
 
 DEFINE_UNOP_FLOAT(sgn, sc_sgn(a))
@@ -1056,12 +1064,7 @@ DEFINE_BINOP_FLOATVV1(nextafter, nextafter(a, b), vvnextafter(out, const_cast<Z*
 	BinaryOp* gBinaryOpPtr_plus = &gBinaryOp_plus;
 	BINARY_OP_PRIM(plus)
 
-	#ifndef DOCTEST_CONFIG_DISABLE
-		#define CHECK_ARR(expected, actual, n) \
-		do { \
-			LOOP(i,n) { CHECK(out[i] == doctest::Approx(expected[i]).epsilon(1e-9)); } \
-		} while (0)
-	#endif
+
 
 	TEST_CASE("BinaryOp_plus loopz") {
 		double aa[] = {1, 2, 3};
