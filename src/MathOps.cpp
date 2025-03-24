@@ -868,7 +868,11 @@ TEST_CASE("neg loopz") {
 
 DEFINE_UNOP_FLOAT(sgn, sc_sgn(a))
 
-DEFINE_UNOP_FLOATVV(abs, fabs(a), vvfabs)
+DEFINE_UNOP_FLOATVV3(abs, fabs(a), A.abs())
+
+TEST_CASE("abs loopz") {
+	check_unop_loopz(gUnaryOp_abs, {1, -2, 3}, {1, 2, 3});
+}
 
 DEFINE_UNOP_INT(tolower, tolower((int)a))
 DEFINE_UNOP_INT(toupper, toupper((int)a))
