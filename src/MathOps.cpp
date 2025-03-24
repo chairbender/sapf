@@ -908,9 +908,21 @@ TEST_CASE("rint loopz") {
 DEFINE_UNOP_FLOAT(erf, erf(a))
 DEFINE_UNOP_FLOAT(erfc, erfc(a))
 
-DEFINE_UNOP_FLOATVV(recip, 1./a, vvrec)
-DEFINE_UNOP_FLOATVV(sqrt, sc_sqrt(a), vvsqrt)
-DEFINE_UNOP_FLOATVV(rsqrt, 1./sc_sqrt(a), vvrsqrt)
+DEFINE_UNOP_FLOATVV3(recip, 1./a, 1. / A)
+TEST_CASE("recip loopz") {
+	check_unop_loopz(gUnaryOp_recip, {1, 2, 3}, {1, 1./2, 1./3});
+}
+
+DEFINE_UNOP_FLOATVV3(sqrt, sc_sqrt(a), A.sqrt())
+TEST_CASE("sqrt loopz") {
+	check_unop_loopz(gUnaryOp_sqrt, {1, 2, 3}, {1, sc_sqrt(2), sc_sqrt(3)});
+}
+
+DEFINE_UNOP_FLOATVV3(rsqrt, 1./sc_sqrt(a), A.rsqrt())
+TEST_CASE("rsqrt loopz") {
+	check_unop_loopz(gUnaryOp_rsqrt, {1, 2, 3}, {1, 1./sc_sqrt(2), 1./sc_sqrt(3)});
+}
+
 DEFINE_UNOP_FLOAT(cbrt, cbrt(a))
 DEFINE_UNOP_FLOATVV2(ssq, copysign(a*a, a), vDSP_vssqD(aa, astride, out, 1, n))
 DEFINE_UNOP_FLOATVV2(sq, a*a, vDSP_vsqD(aa, astride, out, 1, n))
