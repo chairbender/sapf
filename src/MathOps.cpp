@@ -1046,6 +1046,13 @@ DEFINE_BINOP_FLOATVV1(nextafter, nextafter(a, b), vvnextafter(out, const_cast<Z*
 	BinaryOp* gBinaryOpPtr_plus = &gBinaryOp_plus;
 	BINARY_OP_PRIM(plus)
 
+	#ifndef DOCTEST_CONFIG_DISABLE
+		#define CHECK_ARR(expected, actual, n) \
+		do { \
+			LOOP(i,n) { CHECK(out[i] == doctest::Approx(expected[i]).epsilon(1e-9)); } \
+		} while (0)
+	#endif
+
 	TEST_CASE("BinaryOp_plus loopz") {
 		double aa[] = {1, 2, 3};
 		double bb[] = {4, 5, 6};
@@ -1056,54 +1063,42 @@ DEFINE_BINOP_FLOATVV1(nextafter, nextafter(a, b), vvnextafter(out, const_cast<Z*
 			double expected[] = {5, 7, 9};
 			gBinaryOp_plus.loopz(3, aa, 1, bb, 1, out);
 
-			for (int i = 0; i < 3; ++i) {
-				CHECK(out[i] == doctest::Approx(expected[i]).epsilon(1e-9));
-			}
+			CHECK_ARR(expected, out, 3);
 		}
 
 		SUBCASE("stride 0") {
 			double expected[] = {5, 5, 5};
 			gBinaryOp_plus.loopz(3, aa, 0, bb, 0, out);
 
-			for (int i = 0; i < 3; ++i) {
-				CHECK(out[i] == doctest::Approx(expected[i]).epsilon(1e-9));
-			}
+			CHECK_ARR(expected, out, 3);
 		}
 
 		SUBCASE("astride 1 bstride 0") {
 			double expected[] = {5, 6, 7};
 			gBinaryOp_plus.loopz(3, aa, 1, bb, 0, out);
 
-			for (int i = 0; i < 3; ++i) {
-				CHECK(out[i] == doctest::Approx(expected[i]).epsilon(1e-9));
-			}
+			CHECK_ARR(expected, out, 3);
 		}
 
 		SUBCASE("astride 0 bstride 1") {
 			double expected[] = {5, 6, 7};
 			gBinaryOp_plus.loopz(3, aa, 0, bb, 1, out);
 
-			for (int i = 0; i < 3; ++i) {
-				CHECK(out[i] == doctest::Approx(expected[i]).epsilon(1e-9));
-			}
+			CHECK_ARR(expected, out, 3);
 		}
 
 		SUBCASE("astride 0 a = 0") {
 			double expected[] = {4, 5, 6};
 			gBinaryOp_plus.loopz(3, zero, 0, bb, 1, out);
 
-			for (int i = 0; i < 3; ++i) {
-				CHECK(out[i] == doctest::Approx(expected[i]).epsilon(1e-9));
-			}
+			CHECK_ARR(expected, out, 3);
 		}
 
 		SUBCASE("bstride 0 b = 0") {
 			double expected[] = {1, 2, 3};
 			gBinaryOp_plus.loopz(3, aa, 1, zero, 0, out);
 
-			for (int i = 0; i < 3; ++i) {
-				CHECK(out[i] == doctest::Approx(expected[i]).epsilon(1e-9));
-			}
+			CHECK_ARR(expected, out, 3);
 		}
 	}
 
@@ -1184,54 +1179,42 @@ DEFINE_BINOP_FLOATVV1(nextafter, nextafter(a, b), vvnextafter(out, const_cast<Z*
 			double expected[] = {5, 7, 9};
 			gBinaryOp_plus_link.loopz(3, aa, 1, bb, 1, out);
 
-			for (int i = 0; i < 3; ++i) {
-				CHECK(out[i] == doctest::Approx(expected[i]).epsilon(1e-9));
-			}
+			CHECK_ARR(expected, out, 3);
 		}
 
 		SUBCASE("stride 0") {
 			double expected[] = {5, 5, 5};
 			gBinaryOp_plus_link.loopz(3, aa, 0, bb, 0, out);
 
-			for (int i = 0; i < 3; ++i) {
-				CHECK(out[i] == doctest::Approx(expected[i]).epsilon(1e-9));
-			}
+			CHECK_ARR(expected, out, 3);
 		}
 
 		SUBCASE("astride 1 bstride 0") {
 			double expected[] = {5, 6, 7};
 			gBinaryOp_plus_link.loopz(3, aa, 1, bb, 0, out);
 
-			for (int i = 0; i < 3; ++i) {
-				CHECK(out[i] == doctest::Approx(expected[i]).epsilon(1e-9));
-			}
+			CHECK_ARR(expected, out, 3);
 		}
 
 		SUBCASE("astride 0 bstride 1") {
 			double expected[] = {5, 6, 7};
 			gBinaryOp_plus_link.loopz(3, aa, 0, bb, 1, out);
 
-			for (int i = 0; i < 3; ++i) {
-				CHECK(out[i] == doctest::Approx(expected[i]).epsilon(1e-9));
-			}
+			CHECK_ARR(expected, out, 3);
 		}
 
 		SUBCASE("astride 0 a = 0") {
 			double expected[] = {4, 5, 6};
 			gBinaryOp_plus_link.loopz(3, zero, 0, bb, 1, out);
 
-			for (int i = 0; i < 3; ++i) {
-				CHECK(out[i] == doctest::Approx(expected[i]).epsilon(1e-9));
-			}
+			CHECK_ARR(expected, out, 3);
 		}
 
 		SUBCASE("bstride 0 b = 0") {
 			double expected[] = {1, 2, 3};
 			gBinaryOp_plus_link.loopz(3, aa, 1, zero, 0, out);
 
-			for (int i = 0; i < 3; ++i) {
-				CHECK(out[i] == doctest::Approx(expected[i]).epsilon(1e-9));
-			}
+			CHECK_ARR(expected, out, 3);
 		}
 	}
 
@@ -1315,54 +1298,42 @@ DEFINE_BINOP_FLOATVV1(nextafter, nextafter(a, b), vvnextafter(out, const_cast<Z*
 			double expected[] = {-3, -3, -3};
 			gBinaryOp_minus.loopz(3, aa, 1, bb, 1, out);
 
-			for (int i = 0; i < 3; ++i) {
-				CHECK(out[i] == doctest::Approx(expected[i]).epsilon(1e-9));
-			}
+			CHECK_ARR(expected, out, 3);
 		}
 
 		SUBCASE("stride 0") {
 			double expected[] = {-3, -3, -3};
 			gBinaryOp_minus.loopz(3, aa, 0, bb, 0, out);
 
-			for (int i = 0; i < 3; ++i) {
-				CHECK(out[i] == doctest::Approx(expected[i]).epsilon(1e-9));
-			}
+			CHECK_ARR(expected, out, 3);
 		}
 
 		SUBCASE("astride 1 bstride 0") {
 			double expected[] = {-3, -2, -1};
 			gBinaryOp_minus.loopz(3, aa, 1, bb, 0, out);
 
-			for (int i = 0; i < 3; ++i) {
-				CHECK(out[i] == doctest::Approx(expected[i]).epsilon(1e-9));
-			}
+			CHECK_ARR(expected, out, 3);
 		}
 
 		SUBCASE("astride 0 bstride 1") {
 			double expected[] = {-3, -4, -5};
 			gBinaryOp_minus.loopz(3, aa, 0, bb, 1, out);
 
-			for (int i = 0; i < 3; ++i) {
-				CHECK(out[i] == doctest::Approx(expected[i]).epsilon(1e-9));
-			}
+			CHECK_ARR(expected, out, 3);
 		}
 
 		SUBCASE("astride 0 a = 0") {
 			double expected[] = {-4, -5, -6};
 			gBinaryOp_minus.loopz(3, zero, 0, bb, 1, out);
 
-			for (int i = 0; i < 3; ++i) {
-				CHECK(out[i] == doctest::Approx(expected[i]).epsilon(1e-9));
-			}
+			CHECK_ARR(expected, out, 3);
 		}
 
 		SUBCASE("bstride 0 b = 0") {
 			double expected[] = {1, 2, 3};
 			gBinaryOp_minus.loopz(3, aa, 1, zero, 0, out);
 
-			for (int i = 0; i < 3; ++i) {
-				CHECK(out[i] == doctest::Approx(expected[i]).epsilon(1e-9));
-			}
+			CHECK_ARR(expected, out, 3);
 		}
 	}
 
@@ -1463,54 +1434,42 @@ DEFINE_BINOP_FLOATVV1(nextafter, nextafter(a, b), vvnextafter(out, const_cast<Z*
 			double expected[] = {4, 10, 18};
 			gBinaryOp_mul.loopz(3, aa, 1, bb, 1, out);
 
-			for (int i = 0; i < 3; ++i) {
-				CHECK(out[i] == doctest::Approx(expected[i]).epsilon(1e-9));
-			}
+			CHECK_ARR(expected, out, 3);
 		}
 
 		SUBCASE("stride 0") {
 			double expected[] = {4, 4, 4};
 			gBinaryOp_mul.loopz(3, aa, 0, bb, 0, out);
 
-			for (int i = 0; i < 3; ++i) {
-				CHECK(out[i] == doctest::Approx(expected[i]).epsilon(1e-9));
-			}
+			CHECK_ARR(expected, out, 3);
 		}
 
 		SUBCASE("astride 1 bstride 0") {
 			double expected[] = {4, 8, 12};
 			gBinaryOp_mul.loopz(3, aa, 1, bb, 0, out);
 
-			for (int i = 0; i < 3; ++i) {
-				CHECK(out[i] == doctest::Approx(expected[i]).epsilon(1e-9));
-			}
+			CHECK_ARR(expected, out, 3);
 		}
 
 		SUBCASE("astride 0 bstride 1") {
 			double expected[] = {4, 5, 6};
 			gBinaryOp_mul.loopz(3, aa, 0, bb, 1, out);
 
-			for (int i = 0; i < 3; ++i) {
-				CHECK(out[i] == doctest::Approx(expected[i]).epsilon(1e-9));
-			}
+			CHECK_ARR(expected, out, 3);
 		}
 
 		SUBCASE("astride 0 a = 1") {
 			double expected[] = {4, 5, 6};
 			gBinaryOp_mul.loopz(3, one, 0, bb, 1, out);
 
-			for (int i = 0; i < 3; ++i) {
-				CHECK(out[i] == doctest::Approx(expected[i]).epsilon(1e-9));
-			}
+			CHECK_ARR(expected, out, 3);
 		}
 
 		SUBCASE("bstride 0 b = 1") {
 			double expected[] = {1, 2, 3};
 			gBinaryOp_mul.loopz(3, aa, 1, one, 0, out);
 
-			for (int i = 0; i < 3; ++i) {
-				CHECK(out[i] == doctest::Approx(expected[i]).epsilon(1e-9));
-			}
+			CHECK_ARR(expected, out, 3);
 		}
 	}
 
@@ -1583,54 +1542,42 @@ DEFINE_BINOP_FLOATVV1(nextafter, nextafter(a, b), vvnextafter(out, const_cast<Z*
 			double expected[] = {.25, .4, .5};
 			gBinaryOp_div.loopz(3, aa, 1, bb, 1, out);
 
-			for (int i = 0; i < 3; ++i) {
-				CHECK(out[i] == doctest::Approx(expected[i]).epsilon(1e-9));
-			}
+			CHECK_ARR(expected, out, 3);
 		}
 
 		SUBCASE("stride 0") {
 			double expected[] = {.25, .25, .25};
 			gBinaryOp_div.loopz(3, aa, 0, bb, 0, out);
 
-			for (int i = 0; i < 3; ++i) {
-				CHECK(out[i] == doctest::Approx(expected[i]).epsilon(1e-9));
-			}
+			CHECK_ARR(expected, out, 3);
 		}
 
 		SUBCASE("astride 1 bstride 0") {
 			double expected[] = {.25, .5, .75};
 			gBinaryOp_div.loopz(3, aa, 1, bb, 0, out);
 
-			for (int i = 0; i < 3; ++i) {
-				CHECK(out[i] == doctest::Approx(expected[i]).epsilon(1e-9));
-			}
+			CHECK_ARR(expected, out, 3);
 		}
 
 		SUBCASE("astride 0 bstride 1") {
 			double expected[] = {.25, .2, 1./6};
 			gBinaryOp_div.loopz(3, aa, 0, bb, 1, out);
 
-			for (int i = 0; i < 3; ++i) {
-				CHECK(out[i] == doctest::Approx(expected[i]).epsilon(1e-9));
-			}
+			CHECK_ARR(expected, out, 3);
 		}
 
 		SUBCASE("astride 0 a = 1") {
 			double expected[] = {.25, .2, 1./6};
 			gBinaryOp_div.loopz(3, one, 0, bb, 1, out);
 
-			for (int i = 0; i < 3; ++i) {
-				CHECK(out[i] == doctest::Approx(expected[i]).epsilon(1e-9));
-			}
+			CHECK_ARR(expected, out, 3);
 		}
 
 		SUBCASE("bstride 0 b = 1") {
 			double expected[] = {1, 1, 1};
 			gBinaryOp_div.loopz(3, aa, 1, one, 0, out);
 
-			for (int i = 0; i < 3; ++i) {
-				CHECK(out[i] == doctest::Approx(expected[i]).epsilon(1e-9));
-			}
+			CHECK_ARR(expected, out, 3);
 		}
 	}
 
