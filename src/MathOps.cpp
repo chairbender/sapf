@@ -861,16 +861,20 @@ UnaryOp_ToZero gUnaryOp_ToZero;
 #endif
 
 DEFINE_UNOP_FLOATVV3(neg, -a, A * -1)
-TEST_CASE("neg loopz") {
-	check_unop_loopz(gUnaryOp_neg, {1, 2, 3}, {-1, -2, -3});
-}
+#ifndef DOCTEST_CONFIG_DISABLE
+	TEST_CASE("neg loopz") {
+		check_unop_loopz(gUnaryOp_neg, {1, 2, 3}, {-1, -2, -3});
+	}
+#endif
 
 DEFINE_UNOP_FLOAT(sgn, sc_sgn(a))
 
 DEFINE_UNOP_FLOATVV3(abs, fabs(a), A.abs())
-TEST_CASE("abs loopz") {
-	check_unop_loopz(gUnaryOp_abs, {1, -2, 3}, {1, 2, 3});
-}
+#ifndef DOCTEST_CONFIG_DISABLE
+	TEST_CASE("abs loopz") {
+		check_unop_loopz(gUnaryOp_abs, {1, -2, 3}, {1, 2, 3});
+	}
+#endif
 
 DEFINE_UNOP_INT(tolower, tolower((int)a))
 DEFINE_UNOP_INT(toupper, toupper((int)a))
@@ -885,43 +889,56 @@ DEFINE_UNOP_INT(toupper, toupper((int)a))
 #endif
 
 DEFINE_UNOP_FLOATVV3(frac, a - floor(a), A - A.floor())
-TEST_CASE("frac loopz") {
-	check_unop_loopz(gUnaryOp_frac, {1.1, 2.2, 3.3}, {0.1, 0.2, 0.3});
-}
+#ifndef DOCTEST_CONFIG_DISABLE
+	TEST_CASE("frac loopz") {
+		check_unop_loopz(gUnaryOp_frac, {1.1, 2.2, 3.3}, {0.1, 0.2, 0.3});
+	}
+#endif
 
 DEFINE_UNOP_FLOATVV3(floor, floor(a), A.floor())
-TEST_CASE("floor loopz") {
-	check_unop_loopz(gUnaryOp_floor, {1.1, 2.2, 3.3}, {1, 2, 3});
-}
-
+#ifndef DOCTEST_CONFIG_DISABLE
+	TEST_CASE("floor loopz") {
+		check_unop_loopz(gUnaryOp_floor, {1.1, 2.2, 3.3}, {1, 2, 3});
+	}
+#endif
 
 DEFINE_UNOP_FLOATVV3(ceil, ceil(a), A.ceil())
-TEST_CASE("ceil loopz") {
-	check_unop_loopz(gUnaryOp_ceil, {1.1, 2.2, 3.3}, {2, 3, 4});
-}
+#ifndef DOCTEST_CONFIG_DISABLE
+	TEST_CASE("ceil loopz") {
+		check_unop_loopz(gUnaryOp_ceil, {1.1, 2.2, 3.3}, {2, 3, 4});
+	}
+#endif
 
 DEFINE_UNOP_FLOATVV3(rint, rint(a), A.round())
-TEST_CASE("rint loopz") {
-	check_unop_loopz(gUnaryOp_rint, {1.1, 2.2, 3.6}, {1, 2, 4});
-}
+#ifndef DOCTEST_CONFIG_DISABLE
+	TEST_CASE("rint loopz") {
+		check_unop_loopz(gUnaryOp_rint, {1.1, 2.2, 3.6}, {1, 2, 4});
+	}
+#endif
 
 DEFINE_UNOP_FLOAT(erf, erf(a))
 DEFINE_UNOP_FLOAT(erfc, erfc(a))
 
 DEFINE_UNOP_FLOATVV3(recip, 1./a, 1. / A)
-TEST_CASE("recip loopz") {
-	check_unop_loopz(gUnaryOp_recip, {1, 2, 3}, {1, 1./2, 1./3});
-}
+#ifndef DOCTEST_CONFIG_DISABLE
+	TEST_CASE("recip loopz") {
+		check_unop_loopz(gUnaryOp_recip, {1, 2, 3}, {1, 1./2, 1./3});
+	}
+#endif
 
 DEFINE_UNOP_FLOATVV3(sqrt, sc_sqrt(a), A.sqrt())
-TEST_CASE("sqrt loopz") {
-	check_unop_loopz(gUnaryOp_sqrt, {1, 2, 3}, {1, sc_sqrt(2), sc_sqrt(3)});
-}
+#ifndef DOCTEST_CONFIG_DISABLE
+	TEST_CASE("sqrt loopz") {
+		check_unop_loopz(gUnaryOp_sqrt, {1, 2, 3}, {1, sc_sqrt(2), sc_sqrt(3)});
+	}
+#endif
 
 DEFINE_UNOP_FLOATVV3(rsqrt, 1./sc_sqrt(a), A.rsqrt())
-TEST_CASE("rsqrt loopz") {
-	check_unop_loopz(gUnaryOp_rsqrt, {1, 2, 3}, {1, 1./sc_sqrt(2), 1./sc_sqrt(3)});
-}
+#ifndef DOCTEST_CONFIG_DISABLE
+	TEST_CASE("rsqrt loopz") {
+		check_unop_loopz(gUnaryOp_rsqrt, {1, 2, 3}, {1, 1./sc_sqrt(2), 1./sc_sqrt(3)});
+	}
+#endif
 
 DEFINE_UNOP_FLOAT(cbrt, cbrt(a))
 DEFINE_UNOP_FLOATVV2(ssq, copysign(a*a, a), vDSP_vssqD(aa, astride, out, 1, n))
