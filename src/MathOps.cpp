@@ -860,7 +860,11 @@ UnaryOp_ToZero gUnaryOp_ToZero;
 	}
 #endif
 
-DEFINE_UNOP_FLOATVV3(neg, -a, A * -1)
+#ifdef SAPF_ACCELERATE
+	DEFINE_UNOP_FLOATVV2(neg, -a, vDSP_vnegD(const_cast<Z*>(aa), astride, out, 1, n))
+#else
+	DEFINE_UNOP_FLOATVV3(neg, -a, A * -1)
+#endif
 #ifndef DOCTEST_CONFIG_DISABLE
 	TEST_CASE("neg loopz") {
 		check_unop_loopz(gUnaryOp_neg, {1, 2, 3}, {-1, -2, -3});
@@ -869,7 +873,11 @@ DEFINE_UNOP_FLOATVV3(neg, -a, A * -1)
 
 DEFINE_UNOP_FLOAT(sgn, sc_sgn(a))
 
-DEFINE_UNOP_FLOATVV3(abs, fabs(a), A.abs())
+#ifdef SAPF_ACCELERATE
+	DEFINE_UNOP_FLOATVV(abs, fabs(a), vvfabs)
+#else
+	DEFINE_UNOP_FLOATVV3(abs, fabs(a), A.abs())
+#endif
 #ifndef DOCTEST_CONFIG_DISABLE
 	TEST_CASE("abs loopz") {
 		check_unop_loopz(gUnaryOp_abs, {1, -2, 3}, {1, 2, 3});
@@ -888,28 +896,44 @@ DEFINE_UNOP_INT(toupper, toupper((int)a))
 	DEFINE_UNOP_BOOL_INT(toascii, toascii((int)a))
 #endif
 
-DEFINE_UNOP_FLOATVV3(frac, a - floor(a), A - A.floor())
+#ifdef SAPF_ACCELERATE
+	DEFINE_UNOP_FLOATVV2(frac, a - floor(a), vvfloor(out, aa, &n); vDSP_vsubD(out, 1, aa, astride, out, 1, n))
+#else
+	DEFINE_UNOP_FLOATVV3(frac, a - floor(a), A - A.floor())
+#endif
 #ifndef DOCTEST_CONFIG_DISABLE
 	TEST_CASE("frac loopz") {
 		check_unop_loopz(gUnaryOp_frac, {1.1, 2.2, 3.3}, {0.1, 0.2, 0.3});
 	}
 #endif
 
-DEFINE_UNOP_FLOATVV3(floor, floor(a), A.floor())
+#ifdef SAPF_ACCELERATE
+	DEFINE_UNOP_FLOATVV(floor, floor(a), vvfloor)
+#else
+	DEFINE_UNOP_FLOATVV3(floor, floor(a), A.floor())
+#endif
 #ifndef DOCTEST_CONFIG_DISABLE
 	TEST_CASE("floor loopz") {
 		check_unop_loopz(gUnaryOp_floor, {1.1, 2.2, 3.3}, {1, 2, 3});
 	}
 #endif
 
-DEFINE_UNOP_FLOATVV3(ceil, ceil(a), A.ceil())
+#ifdef SAPF_ACCELERATE
+	DEFINE_UNOP_FLOATVV(ceil, ceil(a), vvceil)
+#else
+	DEFINE_UNOP_FLOATVV3(ceil, ceil(a), A.ceil())
+#endif
 #ifndef DOCTEST_CONFIG_DISABLE
 	TEST_CASE("ceil loopz") {
 		check_unop_loopz(gUnaryOp_ceil, {1.1, 2.2, 3.3}, {2, 3, 4});
 	}
 #endif
 
-DEFINE_UNOP_FLOATVV3(rint, rint(a), A.round())
+#ifdef SAPF_ACCELERATE
+	DEFINE_UNOP_FLOATVV(rint, rint(a), vvnint)
+#else
+	DEFINE_UNOP_FLOATVV3(rint, rint(a), A.round())
+#endif
 #ifndef DOCTEST_CONFIG_DISABLE
 	TEST_CASE("rint loopz") {
 		check_unop_loopz(gUnaryOp_rint, {1.1, 2.2, 3.6}, {1, 2, 4});
@@ -919,21 +943,33 @@ DEFINE_UNOP_FLOATVV3(rint, rint(a), A.round())
 DEFINE_UNOP_FLOAT(erf, erf(a))
 DEFINE_UNOP_FLOAT(erfc, erfc(a))
 
-DEFINE_UNOP_FLOATVV3(recip, 1./a, 1. / A)
+#ifdef SAPF_ACCELERATE
+	DEFINE_UNOP_FLOATVV(recip, 1./a, vvrec)
+#else
+	DEFINE_UNOP_FLOATVV3(recip, 1./a, 1. / A)
+#endif
 #ifndef DOCTEST_CONFIG_DISABLE
 	TEST_CASE("recip loopz") {
 		check_unop_loopz(gUnaryOp_recip, {1, 2, 3}, {1, 1./2, 1./3});
 	}
 #endif
 
-DEFINE_UNOP_FLOATVV3(sqrt, sc_sqrt(a), A.sqrt())
+#ifdef SAPF_ACCELERATE
+	DEFINE_UNOP_FLOATVV(sqrt, sc_sqrt(a), vvsqrt)
+#else
+	DEFINE_UNOP_FLOATVV3(sqrt, sc_sqrt(a), A.sqrt())
+#endif
 #ifndef DOCTEST_CONFIG_DISABLE
 	TEST_CASE("sqrt loopz") {
 		check_unop_loopz(gUnaryOp_sqrt, {1, 2, 3}, {1, sc_sqrt(2), sc_sqrt(3)});
 	}
 #endif
 
-DEFINE_UNOP_FLOATVV3(rsqrt, 1./sc_sqrt(a), A.rsqrt())
+#ifdef SAPF_ACCELERATE
+	DEFINE_UNOP_FLOATVV(rsqrt, 1./sc_sqrt(a), vvrsqrt)
+#else
+	DEFINE_UNOP_FLOATVV3(rsqrt, 1./sc_sqrt(a), A.rsqrt())
+#endif
 #ifndef DOCTEST_CONFIG_DISABLE
 	TEST_CASE("rsqrt loopz") {
 		check_unop_loopz(gUnaryOp_rsqrt, {1, 2, 3}, {1, 1./sc_sqrt(2), 1./sc_sqrt(3)});
@@ -942,14 +978,22 @@ DEFINE_UNOP_FLOATVV3(rsqrt, 1./sc_sqrt(a), A.rsqrt())
 
 DEFINE_UNOP_FLOAT(cbrt, cbrt(a))
 
-DEFINE_UNOP_FLOATVV3(ssq, copysign(a*a, a), A.sign() * A.square())
+#ifdef SAPF_ACCELERATE
+	DEFINE_UNOP_FLOATVV2(ssq, copysign(a*a, a), vDSP_vssqD(aa, astride, out, 1, n))
+#else
+	DEFINE_UNOP_FLOATVV3(ssq, copysign(a*a, a), A.sign() * A.square())
+#endif
 #ifndef DOCTEST_CONFIG_DISABLE
 	TEST_CASE("ssq loopz") {
 		check_unop_loopz(gUnaryOp_ssq, {1, -2, -3}, {1, -4, -9});
 	}
 #endif
 
-DEFINE_UNOP_FLOATVV3(sq, a*a, A.square())
+#ifdef SAPF_ACCELERATE
+	DEFINE_UNOP_FLOATVV2(sq, a*a, vDSP_vsqD(aa, astride, out, 1, n))
+#else
+	DEFINE_UNOP_FLOATVV3(sq, a*a, A.square())
+#endif
 #ifndef DOCTEST_CONFIG_DISABLE
 	TEST_CASE("sq loopz") {
 		check_unop_loopz(gUnaryOp_sq, {1, -2, -3}, {1, 4, 9});
@@ -964,14 +1008,22 @@ DEFINE_UNOP_FLOAT(pow7, sc_seventh(a))
 DEFINE_UNOP_FLOAT(pow8, sc_eighth(a))
 DEFINE_UNOP_FLOAT(pow9, sc_ninth(a))
 
-DEFINE_UNOP_FLOATVV3(exp, exp(a), A.exp())
+#ifdef SAPF_ACCELERATE
+	DEFINE_UNOP_FLOATVV(exp, exp(a), vvexp)
+#else
+	DEFINE_UNOP_FLOATVV3(exp, exp(a), A.exp())
+#endif
 #ifndef DOCTEST_CONFIG_DISABLE
 	TEST_CASE("exp loopz") {
 		check_unop_loopz(gUnaryOp_exp, {1, 2, 3}, {exp(1), exp(2), exp(3)});
 	}
 #endif
 
-DEFINE_UNOP_FLOATVV3(exp2, exp2(a), pow(2,A))
+#ifdef SAPF_ACCELERATE
+	DEFINE_UNOP_FLOATVV(exp2, exp2(a), vvexp2)
+#else
+	DEFINE_UNOP_FLOATVV3(exp2, exp2(a), pow(2,A))
+#endif
 #ifndef DOCTEST_CONFIG_DISABLE
 	TEST_CASE("exp2 loopz") {
 		check_unop_loopz(gUnaryOp_exp2, {1, 2, 3}, {2, 4, 8});
@@ -980,35 +1032,55 @@ DEFINE_UNOP_FLOATVV3(exp2, exp2(a), pow(2,A))
 
 DEFINE_UNOP_FLOAT(exp10, pow(10., a))
 
-DEFINE_UNOP_FLOATVV3(expm1, expm1(a), A.exp() - 1)
+#ifdef SAPF_ACCELERATE
+	DEFINE_UNOP_FLOATVV(expm1, expm1(a), vvexpm1)
+#else
+	DEFINE_UNOP_FLOATVV3(expm1, expm1(a), A.exp() - 1)
+#endif
 #ifndef DOCTEST_CONFIG_DISABLE
 	TEST_CASE("expm1 loopz") {
 		check_unop_loopz(gUnaryOp_expm1, {1, 2, 3}, {expm1(1), expm1(2), expm1(3)});
 	}
 #endif
 
-DEFINE_UNOP_FLOATVV3(log, sc_log(a), A.log())
+#ifdef SAPF_ACCELERATE
+	DEFINE_UNOP_FLOATVV(log, sc_log(a), vvlog)
+#else
+	DEFINE_UNOP_FLOATVV3(log, sc_log(a), A.log())
+#endif
 #ifndef DOCTEST_CONFIG_DISABLE
 	TEST_CASE("log loopz") {
 		check_unop_loopz(gUnaryOp_log, {1, 2, 3}, {sc_log(1), sc_log(2), sc_log(3)});
 	}
 #endif
 
-DEFINE_UNOP_FLOATVV3(log2, sc_log2(a), A.log() / sc_log(2.0))
+#ifdef SAPF_ACCELERATE
+	DEFINE_UNOP_FLOATVV(log2, sc_log2(a), vvlog2)
+#else
+	DEFINE_UNOP_FLOATVV3(log2, sc_log2(a), A.log() / sc_log(2.0))
+#endif
 #ifndef DOCTEST_CONFIG_DISABLE
 	TEST_CASE("log2 loopz") {
 		check_unop_loopz(gUnaryOp_log2, {1, 2, 3}, {sc_log2(1), sc_log2(2), sc_log2(3)});
 	}
 #endif
 
-DEFINE_UNOP_FLOATVV3(log10, sc_log10(a), A.log10())
+#ifdef SAPF_ACCELERATE
+	DEFINE_UNOP_FLOATVV(log10, sc_log10(a), vvlog10)
+#else
+	DEFINE_UNOP_FLOATVV3(log10, sc_log10(a), A.log10())
+#endif
 #ifndef DOCTEST_CONFIG_DISABLE
 	TEST_CASE("log10 loopz") {
 		check_unop_loopz(gUnaryOp_log10, {1, 2, 3}, {sc_log10(1), sc_log10(2), sc_log10(3)});
 	}
 #endif
 
-DEFINE_UNOP_FLOATVV3(log1p, log1p(a), A.log1p())
+#ifdef SAPF_ACCELERATE
+	DEFINE_UNOP_FLOATVV(log1p, log1p(a), vvlog1p)
+#else
+	DEFINE_UNOP_FLOATVV3(log1p, log1p(a), A.log1p())
+#endif
 #ifndef DOCTEST_CONFIG_DISABLE
 	TEST_CASE("log1p loopz") {
 		check_unop_loopz(gUnaryOp_log1p, {1, 2, 3}, {log1p(1), log1p(2), log1p(3)});
