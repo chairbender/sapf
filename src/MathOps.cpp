@@ -853,12 +853,15 @@ UnaryOp_ToZero gUnaryOp_ToZero;
 		LOOP(i,n) { CHECK(out[i] == doctest::Approx(expected[i]).epsilon(1e-9)); } \
 	} while (0)
 
-	void check_unop_loopz(UnaryOp& op) {
-		double in[3] = {1, 2, 3};
+	void check_unop_loopz(UnaryOp& op, const std::array<Z, 3> in) {
 		double out[3];
 		double expected[3] = {op.op(1), op.op(2), op.op(3)};
-		op.loopz(3, in, 1, out);
+		op.loopz(3, in.data(), 1, out);
 		CHECK_ARR(expected, out, 3);
+	}
+
+	void check_unop_loopz(UnaryOp& op) {
+		check_unop_loopz(op, {1, 2, 3});
 	}
 #endif
 
@@ -1107,20 +1110,148 @@ DEFINE_UNOP_FLOAT(sinc, sc_sinc(a))
 	}
 #endif
 
+#ifdef SAPF_ACCELERATE
+	DEFINE_UNOP_FLOATVV(cos, cos(a), vvcos)
+#else
+	DEFINE_UNOP_FLOATVV3(cos, cos(a), A.cos())
+#endif
+#ifndef DOCTEST_CONFIG_DISABLE
+	TEST_CASE("cos loopz") {
+		check_unop_loopz(gUnaryOp_cos);
+	}
+#endif
 
-DEFINE_UNOP_FLOATVV(cos, cos(a), vvcos)
-DEFINE_UNOP_FLOATVV2(sin1, sin(a * kTwoPi), Z b = kTwoPi; vDSP_vsmulD(const_cast<Z*>(aa), astride, &b, out, 1, n); vvsin(out, out, &n))
-DEFINE_UNOP_FLOATVV2(cos1, cos(a * kTwoPi), Z b = kTwoPi; vDSP_vsmulD(const_cast<Z*>(aa), astride, &b, out, 1, n); vvcos(out, out, &n))
-DEFINE_UNOP_FLOATVV(tan, tan(a), vvtan)
-DEFINE_UNOP_FLOATVV(asin, asin(a), vvasin)
-DEFINE_UNOP_FLOATVV(acos, acos(a), vvacos)
-DEFINE_UNOP_FLOATVV(atan, atan(a), vvatan)
-DEFINE_UNOP_FLOATVV(sinh, sinh(a), vvsinh)
-DEFINE_UNOP_FLOATVV(cosh, cosh(a), vvcosh)
-DEFINE_UNOP_FLOATVV(tanh, tanh(a), vvtanh)
-DEFINE_UNOP_FLOATVV(asinh, asinh(a), vvasinh)
-DEFINE_UNOP_FLOATVV(acosh, acosh(a), vvacosh)
-DEFINE_UNOP_FLOATVV(atanh, atanh(a), vvatanh)
+#ifdef SAPF_ACCELERATE
+	DEFINE_UNOP_FLOATVV2(sin1, sin(a * kTwoPi), Z b = kTwoPi; vDSP_vsmulD(const_cast<Z*>(aa), astride, &b, out, 1, n); vvsin(out, out, &n))
+#else
+	DEFINE_UNOP_FLOATVV3(sin1, sin(a * kTwoPi), (kTwoPi * A).sin())
+#endif
+#ifndef DOCTEST_CONFIG_DISABLE
+	TEST_CASE("sin1 loopz") {
+		check_unop_loopz(gUnaryOp_sin1);
+	}
+#endif
+
+#ifdef SAPF_ACCELERATE
+	DEFINE_UNOP_FLOATVV2(cos1, cos(a * kTwoPi), Z b = kTwoPi; vDSP_vsmulD(const_cast<Z*>(aa), astride, &b, out, 1, n); vvcos(out, out, &n))
+#else
+	DEFINE_UNOP_FLOATVV3(cos1, cos(a * kTwoPi), (kTwoPi * A).cos())
+#endif
+#ifndef DOCTEST_CONFIG_DISABLE
+	TEST_CASE("cos1 loopz") {
+		check_unop_loopz(gUnaryOp_cos1);
+	}
+#endif
+
+#ifdef SAPF_ACCELERATE
+	DEFINE_UNOP_FLOATVV(tan, tan(a), vvtan)
+#else
+	DEFINE_UNOP_FLOATVV3(tan, tan(a), A.tan())
+#endif
+#ifndef DOCTEST_CONFIG_DISABLE
+	TEST_CASE("tan loopz") {
+		check_unop_loopz(gUnaryOp_tan);
+	}
+#endif
+
+#ifdef SAPF_ACCELERATE
+	DEFINE_UNOP_FLOATVV(asin, asin(a), vvasin)
+#else
+	DEFINE_UNOP_FLOATVV3(asin, asin(a), A.asin())
+#endif
+#ifndef DOCTEST_CONFIG_DISABLE
+	TEST_CASE("asin loopz") {
+		check_unop_loopz(gUnaryOp_asin);
+	}
+#endif
+
+#ifdef SAPF_ACCELERATE
+	DEFINE_UNOP_FLOATVV(acos, acos(a), vvacos)
+#else
+	DEFINE_UNOP_FLOATVV3(acos, acos(a), A.acos())
+#endif
+#ifndef DOCTEST_CONFIG_DISABLE
+	TEST_CASE("acos loopz") {
+		check_unop_loopz(gUnaryOp_acos);
+	}
+#endif
+
+#ifdef SAPF_ACCELERATE
+	DEFINE_UNOP_FLOATVV(atan, atan(a), vvatan)
+#else
+	DEFINE_UNOP_FLOATVV3(atan, atan(a), A.atan())
+#endif
+#ifndef DOCTEST_CONFIG_DISABLE
+	TEST_CASE("atan loopz") {
+		check_unop_loopz(gUnaryOp_atan);
+	}
+#endif
+
+#ifdef SAPF_ACCELERATE
+	DEFINE_UNOP_FLOATVV(sinh, sinh(a), vvsinh)
+#else
+	DEFINE_UNOP_FLOATVV3(sinh, sinh(a), A.sinh())
+#endif
+#ifndef DOCTEST_CONFIG_DISABLE
+	TEST_CASE("sinh loopz") {
+		check_unop_loopz(gUnaryOp_sinh);
+	}
+#endif
+
+#ifdef SAPF_ACCELERATE
+	DEFINE_UNOP_FLOATVV(cosh, cosh(a), vvcosh)
+#else
+	DEFINE_UNOP_FLOATVV3(cosh, cosh(a), A.cosh())
+#endif
+#ifndef DOCTEST_CONFIG_DISABLE
+	TEST_CASE("cosh loopz") {
+		check_unop_loopz(gUnaryOp_cosh);
+	}
+#endif
+
+#ifdef SAPF_ACCELERATE
+	DEFINE_UNOP_FLOATVV(tanh, tanh(a), vvtanh)
+#else
+	DEFINE_UNOP_FLOATVV3(tanh, tanh(a), A.tanh())
+#endif
+#ifndef DOCTEST_CONFIG_DISABLE
+	TEST_CASE("tanh loopz") {
+		check_unop_loopz(gUnaryOp_tanh);
+	}
+#endif
+
+#ifdef SAPF_ACCELERATE
+	DEFINE_UNOP_FLOATVV(asinh, asinh(a), vvasinh)
+#else
+	DEFINE_UNOP_FLOATVV3(asinh, asinh(a), A.asinh())
+#endif
+#ifndef DOCTEST_CONFIG_DISABLE
+	TEST_CASE("asinh loopz") {
+		check_unop_loopz(gUnaryOp_asinh, {-0.1, 0, .1});
+	}
+#endif
+
+#ifdef SAPF_ACCELERATE
+	DEFINE_UNOP_FLOATVV(acosh, acosh(a), vvacosh)
+#else
+	DEFINE_UNOP_FLOATVV3(acosh, acosh(a), A.acosh())
+#endif
+#ifndef DOCTEST_CONFIG_DISABLE
+	TEST_CASE("acosh loopz") {
+		check_unop_loopz(gUnaryOp_acosh, {-0.1, 0, .1});
+	}
+#endif
+
+#ifdef SAPF_ACCELERATE
+	DEFINE_UNOP_FLOATVV(atanh, atanh(a), vvatanh)
+#else
+	DEFINE_UNOP_FLOATVV3(atanh, atanh(a), A.atanh())
+#endif
+#ifndef DOCTEST_CONFIG_DISABLE
+	TEST_CASE("atanh loopz") {
+		check_unop_loopz(gUnaryOp_atanh, {-0.1, 0, .1});
+	}
+#endif
 
 #ifdef _WIN32
 	DEFINE_UNOP_FLOAT(J0, _j0(a))
