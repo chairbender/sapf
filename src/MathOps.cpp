@@ -997,16 +997,27 @@ static void sc_clipv(int n, const Z* in, Z* out, Z a, Z b)
 	DEFINE_UNOP_FLOATVV3(inc, a+1, A + 1)
 	DEFINE_UNOP_FLOATVV3(dec, a-1, A - 1)
 	DEFINE_UNOP_FLOATVV3(half, a*.5, A * .5)
-	DEFINE_UNOP_FLOATVV3(twice, a*2, A * 2)
+	DEFINE_UNOP_FLOATVV3(twice, a*2., A * 2.)
 #endif
 
-DEFINE_UNOP_FLOATVV2(biuni, a*.5+.5, Z b = .5; vDSP_vsmulD(const_cast<Z*>(aa), astride, &b, out, 1, n); vDSP_vsaddD(out, 1, &b, out, 1, n))
-DEFINE_UNOP_FLOATVV2(unibi, a*2.-1., Z b = 2.; Z c = -1.; vDSP_vsmulD(aa, astride, &b, out, 1, n); vDSP_vsaddD(out, 1, &c, out, 1, n))
-DEFINE_UNOP_FLOATVV2(biunic, std::clamp(a,-1.,1.)*.5+.5, Z b = .5; sc_clipv(n, aa, out, -1., 1.); vDSP_vsmulD(out, astride, &b, out, 1, n); vDSP_vsaddD(out, 1, &b, out, 1, n))
-DEFINE_UNOP_FLOATVV2(unibic, std::clamp(a,0.,1.)*2.-1., Z b = 2.; Z c = -1.; sc_clipv(n, aa, out, 0., 1.); vDSP_vsmulD(out, astride, &b, out, 1, n); vDSP_vsaddD(out, 1, &c, out, 1, n))
+#ifdef SAPF_ACCELERATE
+	DEFINE_UNOP_FLOATVV2(biuni, a*.5+.5, Z b = .5; vDSP_vsmulD(const_cast<Z*>(aa), astride, &b, out, 1, n); vDSP_vsaddD(out, 1, &b, out, 1, n))
+	DEFINE_UNOP_FLOATVV2(unibi, a*2.-1., Z b = 2.; Z c = -1.; vDSP_vsmulD(aa, astride, &b, out, 1, n); vDSP_vsaddD(out, 1, &c, out, 1, n))
+	DEFINE_UNOP_FLOATVV2(biunic, std::clamp(a,-1.,1.)*.5+.5, Z b = .5; sc_clipv(n, aa, out, -1., 1.); vDSP_vsmulD(out, astride, &b, out, 1, n); vDSP_vsaddD(out, 1, &b, out, 1, n))
+	DEFINE_UNOP_FLOATVV2(unibic, std::clamp(a,0.,1.)*2.-1., Z b = 2.; Z c = -1.; sc_clipv(n, aa, out, 0., 1.); vDSP_vsmulD(out, astride, &b, out, 1, n); vDSP_vsaddD(out, 1, &c, out, 1, n))
+#else
+	DEFINE_UNOP_FLOATVV2(biuni, a*.5+.5, A * .5 + .5)
+	DEFINE_UNOP_FLOATVV2(unibi, a*2.-1., A * 2. - 1.)
+	DEFINE_UNOP_FLOATVV2(biunic, std::clamp(a,-1.,1.)*.5+.5, A.min(1.).max(-1.) * .5 + .5)
+	DEFINE_UNOP_FLOATVV2(unibic, std::clamp(a,0.,1.)*2.-1., A.min(1.).max(0.) * 2. - 1.)
+#endif
 DEFINE_UNOP_FLOAT(cmpl, 1.-a)
 
-DEFINE_UNOP_FLOATVV2(ampdb,     sc_ampdb(a), Z b = 1.; vDSP_vdbconD(const_cast<Z*>(aa), astride, &b, out, 1, n, 1))
+#ifdef SAPF_ACCELERATE
+	DEFINE_UNOP_FLOATVV2(ampdb, sc_ampdb(a), Z b = 1.; vDSP_vdbconD(const_cast<Z*>(aa), astride, &b, out, 1, n, 1))
+#else
+	DEFINE_UNOP_FLOATVV2(ampdb, sc_ampdb(a), A.log10() * 20.)	
+#endif
 DEFINE_UNOP_FLOAT(dbamp,     sc_dbamp(a))
 
 DEFINE_UNOP_FLOAT(hzo,   sc_hzoct(a))
@@ -1024,11 +1035,19 @@ DEFINE_UNOP_FLOAT(ratiocents, sc_ratiocents(a))
 DEFINE_UNOP_FLOAT(semiratio, sc_semiratio(a))
 DEFINE_UNOP_FLOAT(ratiosemi, sc_ratiosemi(a))
 
-DEFINE_UNOP_FLOATVV2(degrad, a*kDegToRad, Z b = kDegToRad; vDSP_vsmulD(aa, astride, &b, out, 1, n))
-DEFINE_UNOP_FLOATVV2(raddeg, a*kRadToDeg, Z b = kRadToDeg; vDSP_vsmulD(aa, astride, &b, out, 1, n))
-DEFINE_UNOP_FLOATVV2(minsec, a*kMinToSecs, Z b = kMinToSecs; vDSP_vsmulD(aa, astride, &b, out, 1, n))
-DEFINE_UNOP_FLOATVV2(secmin, a*kSecsToMin, Z b = kSecsToMin; vDSP_vsmulD(aa, astride, &b, out, 1, n))
-DEFINE_UNOP_FLOATVV2(bpmsec, kMinToSecs / a, Z b = kMinToSecs; vDSP_svdivD(&b, const_cast<double*>(aa), astride, out, 1, n))
+#ifdef SAPF_ACCELERATE
+	DEFINE_UNOP_FLOATVV2(degrad, a*kDegToRad, Z b = kDegToRad; vDSP_vsmulD(aa, astride, &b, out, 1, n))
+	DEFINE_UNOP_FLOATVV2(raddeg, a*kRadToDeg, Z b = kRadToDeg; vDSP_vsmulD(aa, astride, &b, out, 1, n))
+	DEFINE_UNOP_FLOATVV2(minsec, a*kMinToSecs, Z b = kMinToSecs; vDSP_vsmulD(aa, astride, &b, out, 1, n))
+	DEFINE_UNOP_FLOATVV2(secmin, a*kSecsToMin, Z b = kSecsToMin; vDSP_vsmulD(aa, astride, &b, out, 1, n))
+	DEFINE_UNOP_FLOATVV2(bpmsec, kMinToSecs / a, Z b = kMinToSecs; vDSP_svdivD(&b, const_cast<double*>(aa), astride, out, 1, n))
+#else
+	DEFINE_UNOP_FLOATVV2(degrad, a*kDegToRad, A * kDegToRad)
+	DEFINE_UNOP_FLOATVV2(raddeg, a*kRadToDeg, A * kRadToDeg)
+	DEFINE_UNOP_FLOATVV2(minsec, a*kMinToSecs, A * kMinToSecs)
+	DEFINE_UNOP_FLOATVV2(secmin, a*kSecsToMin, A * kSecsToMin)
+	DEFINE_UNOP_FLOATVV2(bpmsec, kMinToSecs / a, kMinToSecs / A)	
+#endif
 
 DEFINE_UNOP_FLOAT(distort,  sc_distort(a))
 DEFINE_UNOP_FLOAT(softclip, sc_softclip(a))
@@ -1090,10 +1109,21 @@ DEFINE_UNOP_FLOAT(zapgremlins, zapgremlins(a))
 		UnaryOp_cosh,
 		UnaryOp_tanh,
 		UnaryOp_asinh,
+		UnaryOp_acosh,
 		UnaryOp_inc,
 		UnaryOp_dec,
 		UnaryOp_half,
-		UnaryOp_twice
+		UnaryOp_twice,
+		UnaryOp_biuni,
+		UnaryOp_unibi,
+		UnaryOp_biunic,
+		UnaryOp_unibic,
+		UnaryOp_ampdb,
+		UnaryOp_degrad,
+		UnaryOp_raddeg,
+		UnaryOp_minsec,
+		UnaryOp_secmin,
+		UnaryOp_bpmsec
 	) {
 		UnaryOp op = UnaryOp();
 		check_unop_loopz(op);

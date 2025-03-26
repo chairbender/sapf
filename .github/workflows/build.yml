@@ -32,7 +32,7 @@ jobs:
       - name: CI-Build
         run: |
           meson setup build
-          meson test optimized --print-errorlogs -C build
+          meson test optimized --verbose -C build
           meson compile sapf_x86_64_v3 -C build
       - name: Save Build Log Artifact
         if: ${{ always() }}
@@ -62,7 +62,7 @@ jobs:
       run: meson setup build
 
     - name: Test
-      run: meson test optimized --print-errorlogs -C build
+      run: meson test optimized --verbose -C build
 
     - name: Compile M1
       if: runner.os == 'macOS'

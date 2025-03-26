@@ -42,9 +42,9 @@ You can pass other doctest-specific command line arguments and they will be forw
 
 You can still use meson test to run the tests:
 ```shell
-meson test unoptimized --print-errorlogs -C build
+meson test unoptimized --verbose -C build
 ```
-Without `--print-errorlogs` you'll need to view the testlog.txt to see the actual failing test cases.
+Without `--verbose` you'll need to view the testlog.txt to see the actual test report.
 The `unoptimized` tests the unoptimized version of the exe (which means it should build more quickly).
 Susbtitute with `optimized` to test the optimized (-O3, -march=native) version of the exe.
 
