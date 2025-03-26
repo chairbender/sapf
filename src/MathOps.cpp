@@ -469,31 +469,7 @@ ZArr zarr(const Z *vec, int n, int stride) {
 		R = op; \
 	} while (0)
 
-#define DEFINE_UNOP_FLOATVV(NAME, CODE, VVNAME) \
-	struct UnaryOp_##NAME : public UnaryOp { \
-		virtual const char *Name() { return #NAME; } \
-		virtual double op(double a) { return CODE; } \
-		virtual void loopz(int n, const Z *x, int astride, Z *y) { \
-                        LOOP(i,n) { Z a = *x; y[i] = CODE; x += astride; }  \
-		} \
-	}; \
-	UnaryOp_##NAME gUnaryOp_##NAME; \
-	UnaryOp* gUnaryOpPtr_##NAME = &gUnaryOp_##NAME; \
-	UNARY_OP_PRIM(NAME)
-
-#define DEFINE_UNOP_FLOATVV2(NAME, CODE, VVCODE) \
-	struct UnaryOp_##NAME : public UnaryOp { \
-		virtual const char *Name() { return #NAME; } \
-		virtual double op(double a) { return CODE; } \
-		virtual void loopz(int n, const Z *aa, int astride, Z *out) { \
-			LOOP(i,n) { Z a = *aa; out[i] = CODE; aa += astride; } \
-		} \
-	}; \
-	UnaryOp_##NAME gUnaryOp_##NAME; \
-	UnaryOp* gUnaryOpPtr_##NAME = &gUnaryOp_##NAME; \
-	UNARY_OP_PRIM(NAME)
-
-#define DEFINE_UNOP_FLOATVV3(NAME, CODE, OP) \
+#define DEFINE_UNOP_FLOATVV(NAME, CODE, OP) \
 	struct UnaryOp_##NAME : public UnaryOp { \
 		virtual const char *Name() { return #NAME; } \
 		virtual double op(double a) { return CODE; } \
@@ -850,7 +826,7 @@ UnaryOp_ToZero gUnaryOp_ToZero;
 #ifdef SAPF_ACCELERATE
 	DEFINE_UNOP_FLOATVV2(neg, -a, vDSP_vnegD(const_cast<Z*>(aa), astride, out, 1, n))
 #else
-	DEFINE_UNOP_FLOATVV3(neg, -a, A * -1)
+	DEFINE_UNOP_FLOATVV(neg, -a, A * -1)
 #endif
 
 DEFINE_UNOP_FLOAT(sgn, sc_sgn(a))
@@ -858,7 +834,7 @@ DEFINE_UNOP_FLOAT(sgn, sc_sgn(a))
 #ifdef SAPF_ACCELERATE
 	DEFINE_UNOP_FLOATVV(abs, fabs(a), vvfabs)
 #else
-	DEFINE_UNOP_FLOATVV3(abs, fabs(a), A.abs())
+	DEFINE_UNOP_FLOATVV(abs, fabs(a), A.abs())
 #endif
 
 DEFINE_UNOP_INT(tolower, tolower((int)a))
@@ -879,10 +855,10 @@ DEFINE_UNOP_INT(toupper, toupper((int)a))
 	DEFINE_UNOP_FLOATVV(ceil, ceil(a), vvceil)
 	DEFINE_UNOP_FLOATVV(rint, rint(a), vvnint)
 #else
-	DEFINE_UNOP_FLOATVV3(frac, a - floor(a), A - A.floor())
-	DEFINE_UNOP_FLOATVV3(floor, floor(a), A.floor())
-	DEFINE_UNOP_FLOATVV3(ceil, ceil(a), A.ceil())
-	DEFINE_UNOP_FLOATVV3(rint, rint(a), A.round())
+	DEFINE_UNOP_FLOATVV(frac, a - floor(a), A - A.floor())
+	DEFINE_UNOP_FLOATVV(floor, floor(a), A.floor())
+	DEFINE_UNOP_FLOATVV(ceil, ceil(a), A.ceil())
+	DEFINE_UNOP_FLOATVV(rint, rint(a), A.round())
 #endif
 
 DEFINE_UNOP_FLOAT(erf, erf(a))
@@ -895,11 +871,11 @@ DEFINE_UNOP_FLOAT(erfc, erfc(a))
 	DEFINE_UNOP_FLOATVV2(ssq, copysign(a*a, a), vDSP_vssqD(aa, astride, out, 1, n))
 	DEFINE_UNOP_FLOATVV2(sq, a*a, vDSP_vsqD(aa, astride, out, 1, n))
 #else
-	DEFINE_UNOP_FLOATVV3(recip, 1./a, 1. / A)
-	DEFINE_UNOP_FLOATVV3(sqrt, sc_sqrt(a), A.sqrt())
-	DEFINE_UNOP_FLOATVV3(rsqrt, 1./sc_sqrt(a), A.rsqrt())
-	DEFINE_UNOP_FLOATVV3(ssq, copysign(a*a, a), A.sign() * A.square())
-	DEFINE_UNOP_FLOATVV3(sq, a*a, A.square())
+	DEFINE_UNOP_FLOATVV(recip, 1./a, 1. / A)
+	DEFINE_UNOP_FLOATVV(sqrt, sc_sqrt(a), A.sqrt())
+	DEFINE_UNOP_FLOATVV(rsqrt, 1./sc_sqrt(a), A.rsqrt())
+	DEFINE_UNOP_FLOATVV(ssq, copysign(a*a, a), A.sign() * A.square())
+	DEFINE_UNOP_FLOATVV(sq, a*a, A.square())
 #endif
 DEFINE_UNOP_FLOAT(cbrt, cbrt(a))
 
@@ -920,18 +896,23 @@ DEFINE_UNOP_FLOAT(pow9, sc_ninth(a))
 	DEFINE_UNOP_FLOATVV(log10, sc_log10(a), vvlog10)
 	DEFINE_UNOP_FLOATVV(log1p, log1p(a), vvlog1p)
 #else
-	DEFINE_UNOP_FLOATVV3(exp, exp(a), A.exp())
-	DEFINE_UNOP_FLOATVV3(exp2, exp2(a), pow(2,A))
-	DEFINE_UNOP_FLOATVV3(expm1, expm1(a), A.exp() - 1)
-	DEFINE_UNOP_FLOATVV3(log, sc_log(a), A.log())
-	DEFINE_UNOP_FLOATVV3(log2, sc_log2(a), A.log() / sc_log(2.0))
-	DEFINE_UNOP_FLOATVV3(log10, sc_log10(a), A.log10())
-	DEFINE_UNOP_FLOATVV3(log1p, log1p(a), A.log1p())
+	DEFINE_UNOP_FLOATVV(exp, exp(a), A.exp())
+	DEFINE_UNOP_FLOATVV(exp2, exp2(a), pow(2,A))
+	DEFINE_UNOP_FLOATVV(expm1, expm1(a), A.exp() - 1)
+	DEFINE_UNOP_FLOATVV(log, sc_log(a), A.log())
+	DEFINE_UNOP_FLOATVV(log2, sc_log2(a), A.log() / sc_log(2.0))
+	DEFINE_UNOP_FLOATVV(log10, sc_log10(a), A.log10())
+	DEFINE_UNOP_FLOATVV(log1p, log1p(a), A.log1p())
 #endif
 DEFINE_UNOP_FLOAT(exp10, pow(10., a))
+
 // TODO: Eigen doesn't provide a vectorized logb. We could use XSIMD instead to 
 // implement it ourselves if needed
-DEFINE_UNOP_FLOATVV(logb, logb(a), vvlogb)
+#ifdef SAPF_ACCELERATE
+	DEFINE_UNOP_FLOATVV(logb, logb(a), vvlogb)
+#else
+	DEFINE_UNOP_FLOAT(logb, logb(a))
+#endif
 
 DEFINE_UNOP_FLOAT(sinc, sc_sinc(a))
 #ifdef SAPF_ACCELERATE
@@ -950,20 +931,20 @@ DEFINE_UNOP_FLOAT(sinc, sc_sinc(a))
 	DEFINE_UNOP_FLOATVV(acosh, acosh(a), vvacosh)
 	DEFINE_UNOP_FLOATVV(atanh, atanh(a), vvatanh)
 #else
-	DEFINE_UNOP_FLOATVV3(sin, sin(a), A.sin())
-	DEFINE_UNOP_FLOATVV3(cos, cos(a), A.cos())
-	DEFINE_UNOP_FLOATVV3(sin1, sin(a * kTwoPi), (kTwoPi * A).sin())
-	DEFINE_UNOP_FLOATVV3(cos1, cos(a * kTwoPi), (kTwoPi * A).cos())
-	DEFINE_UNOP_FLOATVV3(tan, tan(a), A.tan())
-	DEFINE_UNOP_FLOATVV3(asin, asin(a), A.asin())
-	DEFINE_UNOP_FLOATVV3(acos, acos(a), A.acos())
-	DEFINE_UNOP_FLOATVV3(atan, atan(a), A.atan())
-	DEFINE_UNOP_FLOATVV3(sinh, sinh(a), A.sinh())
-	DEFINE_UNOP_FLOATVV3(cosh, cosh(a), A.cosh())
-	DEFINE_UNOP_FLOATVV3(tanh, tanh(a), A.tanh())
-	DEFINE_UNOP_FLOATVV3(asinh, asinh(a), A.asinh())
-	DEFINE_UNOP_FLOATVV3(acosh, acosh(a), A.acosh())
-	DEFINE_UNOP_FLOATVV3(atanh, atanh(a), A.atanh())
+	DEFINE_UNOP_FLOATVV(sin, sin(a), A.sin())
+	DEFINE_UNOP_FLOATVV(cos, cos(a), A.cos())
+	DEFINE_UNOP_FLOATVV(sin1, sin(a * kTwoPi), (kTwoPi * A).sin())
+	DEFINE_UNOP_FLOATVV(cos1, cos(a * kTwoPi), (kTwoPi * A).cos())
+	DEFINE_UNOP_FLOATVV(tan, tan(a), A.tan())
+	DEFINE_UNOP_FLOATVV(asin, asin(a), A.asin())
+	DEFINE_UNOP_FLOATVV(acos, acos(a), A.acos())
+	DEFINE_UNOP_FLOATVV(atan, atan(a), A.atan())
+	DEFINE_UNOP_FLOATVV(sinh, sinh(a), A.sinh())
+	DEFINE_UNOP_FLOATVV(cosh, cosh(a), A.cosh())
+	DEFINE_UNOP_FLOATVV(tanh, tanh(a), A.tanh())
+	DEFINE_UNOP_FLOATVV(asinh, asinh(a), A.asinh())
+	DEFINE_UNOP_FLOATVV(acosh, acosh(a), A.acosh())
+	DEFINE_UNOP_FLOATVV(atanh, atanh(a), A.atanh())
 #endif
 
 #ifdef _WIN32
@@ -994,10 +975,10 @@ static void sc_clipv(int n, const Z* in, Z* out, Z a, Z b)
 	DEFINE_UNOP_FLOATVV2(half, a*.5, Z b = .5; vDSP_vsmulD(aa, astride, &b, out, 1, n))
 	DEFINE_UNOP_FLOATVV2(twice, a*2., Z b = 2.; vDSP_vsmulD(const_cast<Z*>(aa), astride, &b, out, 1, n))
 #else
-	DEFINE_UNOP_FLOATVV3(inc, a+1, A + 1)
-	DEFINE_UNOP_FLOATVV3(dec, a-1, A - 1)
-	DEFINE_UNOP_FLOATVV3(half, a*.5, A * .5)
-	DEFINE_UNOP_FLOATVV3(twice, a*2., A * 2.)
+	DEFINE_UNOP_FLOATVV(inc, a+1, A + 1)
+	DEFINE_UNOP_FLOATVV(dec, a-1, A - 1)
+	DEFINE_UNOP_FLOATVV(half, a*.5, A * .5)
+	DEFINE_UNOP_FLOATVV(twice, a*2., A * 2.)
 #endif
 
 #ifdef SAPF_ACCELERATE
@@ -1006,17 +987,17 @@ static void sc_clipv(int n, const Z* in, Z* out, Z a, Z b)
 	DEFINE_UNOP_FLOATVV2(biunic, std::clamp(a,-1.,1.)*.5+.5, Z b = .5; sc_clipv(n, aa, out, -1., 1.); vDSP_vsmulD(out, astride, &b, out, 1, n); vDSP_vsaddD(out, 1, &b, out, 1, n))
 	DEFINE_UNOP_FLOATVV2(unibic, std::clamp(a,0.,1.)*2.-1., Z b = 2.; Z c = -1.; sc_clipv(n, aa, out, 0., 1.); vDSP_vsmulD(out, astride, &b, out, 1, n); vDSP_vsaddD(out, 1, &c, out, 1, n))
 #else
-	DEFINE_UNOP_FLOATVV2(biuni, a*.5+.5, A * .5 + .5)
-	DEFINE_UNOP_FLOATVV2(unibi, a*2.-1., A * 2. - 1.)
-	DEFINE_UNOP_FLOATVV2(biunic, std::clamp(a,-1.,1.)*.5+.5, A.min(1.).max(-1.) * .5 + .5)
-	DEFINE_UNOP_FLOATVV2(unibic, std::clamp(a,0.,1.)*2.-1., A.min(1.).max(0.) * 2. - 1.)
+	DEFINE_UNOP_FLOATVV(biuni, a*.5+.5, A * .5 + .5)
+	DEFINE_UNOP_FLOATVV(unibi, a*2.-1., A * 2. - 1.)
+	DEFINE_UNOP_FLOATVV(biunic, std::clamp(a,-1.,1.)*.5+.5, A.min(1.).max(-1.) * .5 + .5)
+	DEFINE_UNOP_FLOATVV(unibic, std::clamp(a,0.,1.)*2.-1., A.min(1.).max(0.) * 2. - 1.)
 #endif
 DEFINE_UNOP_FLOAT(cmpl, 1.-a)
 
 #ifdef SAPF_ACCELERATE
 	DEFINE_UNOP_FLOATVV2(ampdb, sc_ampdb(a), Z b = 1.; vDSP_vdbconD(const_cast<Z*>(aa), astride, &b, out, 1, n, 1))
 #else
-	DEFINE_UNOP_FLOATVV2(ampdb, sc_ampdb(a), A.log10() * 20.)	
+	DEFINE_UNOP_FLOATVV(ampdb, sc_ampdb(a), A.log10() * 20.)	
 #endif
 DEFINE_UNOP_FLOAT(dbamp,     sc_dbamp(a))
 
@@ -1042,11 +1023,11 @@ DEFINE_UNOP_FLOAT(ratiosemi, sc_ratiosemi(a))
 	DEFINE_UNOP_FLOATVV2(secmin, a*kSecsToMin, Z b = kSecsToMin; vDSP_vsmulD(aa, astride, &b, out, 1, n))
 	DEFINE_UNOP_FLOATVV2(bpmsec, kMinToSecs / a, Z b = kMinToSecs; vDSP_svdivD(&b, const_cast<double*>(aa), astride, out, 1, n))
 #else
-	DEFINE_UNOP_FLOATVV2(degrad, a*kDegToRad, A * kDegToRad)
-	DEFINE_UNOP_FLOATVV2(raddeg, a*kRadToDeg, A * kRadToDeg)
-	DEFINE_UNOP_FLOATVV2(minsec, a*kMinToSecs, A * kMinToSecs)
-	DEFINE_UNOP_FLOATVV2(secmin, a*kSecsToMin, A * kSecsToMin)
-	DEFINE_UNOP_FLOATVV2(bpmsec, kMinToSecs / a, kMinToSecs / A)	
+	DEFINE_UNOP_FLOATVV(degrad, a*kDegToRad, A * kDegToRad)
+	DEFINE_UNOP_FLOATVV(raddeg, a*kRadToDeg, A * kRadToDeg)
+	DEFINE_UNOP_FLOATVV(minsec, a*kMinToSecs, A * kMinToSecs)
+	DEFINE_UNOP_FLOATVV(secmin, a*kSecsToMin, A * kSecsToMin)
+	DEFINE_UNOP_FLOATVV(bpmsec, kMinToSecs / a, kMinToSecs / A)	
 #endif
 
 DEFINE_UNOP_FLOAT(distort,  sc_distort(a))
