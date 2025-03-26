@@ -847,33 +847,10 @@ struct UnaryOp_ToZero : public UnaryOp {
 };
 UnaryOp_ToZero gUnaryOp_ToZero; 
 
-#ifndef DOCTEST_CONFIG_DISABLE
-	#define CHECK_ARR(expected, actual, n) \
-	do { \
-		LOOP(i,n) { CHECK(out[i] == doctest::Approx(expected[i]).epsilon(1e-9)); } \
-	} while (0)
-
-	void check_unop_loopz(UnaryOp& op, const std::array<Z, 3> in) {
-		double out[3];
-		double expected[3] = {op.op(1), op.op(2), op.op(3)};
-		op.loopz(3, in.data(), 1, out);
-		CHECK_ARR(expected, out, 3);
-	}
-
-	void check_unop_loopz(UnaryOp& op) {
-		check_unop_loopz(op, {1, 2, 3});
-	}
-#endif
-
 #ifdef SAPF_ACCELERATE
 	DEFINE_UNOP_FLOATVV2(neg, -a, vDSP_vnegD(const_cast<Z*>(aa), astride, out, 1, n))
 #else
 	DEFINE_UNOP_FLOATVV3(neg, -a, A * -1)
-#endif
-#ifndef DOCTEST_CONFIG_DISABLE
-	TEST_CASE("neg loopz") {
-		check_unop_loopz(gUnaryOp_neg);
-	}
 #endif
 
 DEFINE_UNOP_FLOAT(sgn, sc_sgn(a))
@@ -882,11 +859,6 @@ DEFINE_UNOP_FLOAT(sgn, sc_sgn(a))
 	DEFINE_UNOP_FLOATVV(abs, fabs(a), vvfabs)
 #else
 	DEFINE_UNOP_FLOATVV3(abs, fabs(a), A.abs())
-#endif
-#ifndef DOCTEST_CONFIG_DISABLE
-	TEST_CASE("abs loopz") {
-		check_unop_loopz(gUnaryOp_abs);
-	}
 #endif
 
 DEFINE_UNOP_INT(tolower, tolower((int)a))
@@ -906,21 +878,11 @@ DEFINE_UNOP_INT(toupper, toupper((int)a))
 #else
 	DEFINE_UNOP_FLOATVV3(frac, a - floor(a), A - A.floor())
 #endif
-#ifndef DOCTEST_CONFIG_DISABLE
-	TEST_CASE("frac loopz") {
-		check_unop_loopz(gUnaryOp_frac);
-	}
-#endif
 
 #ifdef SAPF_ACCELERATE
 	DEFINE_UNOP_FLOATVV(floor, floor(a), vvfloor)
 #else
 	DEFINE_UNOP_FLOATVV3(floor, floor(a), A.floor())
-#endif
-#ifndef DOCTEST_CONFIG_DISABLE
-	TEST_CASE("floor loopz") {
-		check_unop_loopz(gUnaryOp_floor);
-	}
 #endif
 
 #ifdef SAPF_ACCELERATE
@@ -928,21 +890,11 @@ DEFINE_UNOP_INT(toupper, toupper((int)a))
 #else
 	DEFINE_UNOP_FLOATVV3(ceil, ceil(a), A.ceil())
 #endif
-#ifndef DOCTEST_CONFIG_DISABLE
-	TEST_CASE("ceil loopz") {
-		check_unop_loopz(gUnaryOp_ceil);
-	}
-#endif
 
 #ifdef SAPF_ACCELERATE
 	DEFINE_UNOP_FLOATVV(rint, rint(a), vvnint)
 #else
 	DEFINE_UNOP_FLOATVV3(rint, rint(a), A.round())
-#endif
-#ifndef DOCTEST_CONFIG_DISABLE
-	TEST_CASE("rint loopz") {
-		check_unop_loopz(gUnaryOp_rint);
-	}
 #endif
 
 DEFINE_UNOP_FLOAT(erf, erf(a))
@@ -953,32 +905,17 @@ DEFINE_UNOP_FLOAT(erfc, erfc(a))
 #else
 	DEFINE_UNOP_FLOATVV3(recip, 1./a, 1. / A)
 #endif
-#ifndef DOCTEST_CONFIG_DISABLE
-	TEST_CASE("recip loopz") {
-		check_unop_loopz(gUnaryOp_recip);
-	}
-#endif
 
 #ifdef SAPF_ACCELERATE
 	DEFINE_UNOP_FLOATVV(sqrt, sc_sqrt(a), vvsqrt)
 #else
 	DEFINE_UNOP_FLOATVV3(sqrt, sc_sqrt(a), A.sqrt())
 #endif
-#ifndef DOCTEST_CONFIG_DISABLE
-	TEST_CASE("sqrt loopz") {
-		check_unop_loopz(gUnaryOp_sqrt);
-	}
-#endif
 
 #ifdef SAPF_ACCELERATE
 	DEFINE_UNOP_FLOATVV(rsqrt, 1./sc_sqrt(a), vvrsqrt)
 #else
 	DEFINE_UNOP_FLOATVV3(rsqrt, 1./sc_sqrt(a), A.rsqrt())
-#endif
-#ifndef DOCTEST_CONFIG_DISABLE
-	TEST_CASE("rsqrt loopz") {
-		check_unop_loopz(gUnaryOp_rsqrt);
-	}
 #endif
 
 DEFINE_UNOP_FLOAT(cbrt, cbrt(a))
@@ -988,21 +925,11 @@ DEFINE_UNOP_FLOAT(cbrt, cbrt(a))
 #else
 	DEFINE_UNOP_FLOATVV3(ssq, copysign(a*a, a), A.sign() * A.square())
 #endif
-#ifndef DOCTEST_CONFIG_DISABLE
-	TEST_CASE("ssq loopz") {
-		check_unop_loopz(gUnaryOp_ssq);
-	}
-#endif
 
 #ifdef SAPF_ACCELERATE
 	DEFINE_UNOP_FLOATVV2(sq, a*a, vDSP_vsqD(aa, astride, out, 1, n))
 #else
 	DEFINE_UNOP_FLOATVV3(sq, a*a, A.square())
-#endif
-#ifndef DOCTEST_CONFIG_DISABLE
-	TEST_CASE("sq loopz") {
-		check_unop_loopz(gUnaryOp_sq);
-	}
 #endif
 
 DEFINE_UNOP_FLOAT(cb, a*a*a)
@@ -1018,21 +945,11 @@ DEFINE_UNOP_FLOAT(pow9, sc_ninth(a))
 #else
 	DEFINE_UNOP_FLOATVV3(exp, exp(a), A.exp())
 #endif
-#ifndef DOCTEST_CONFIG_DISABLE
-	TEST_CASE("exp loopz") {
-		check_unop_loopz(gUnaryOp_exp);
-	}
-#endif
 
 #ifdef SAPF_ACCELERATE
 	DEFINE_UNOP_FLOATVV(exp2, exp2(a), vvexp2)
 #else
 	DEFINE_UNOP_FLOATVV3(exp2, exp2(a), pow(2,A))
-#endif
-#ifndef DOCTEST_CONFIG_DISABLE
-	TEST_CASE("exp2 loopz") {
-		check_unop_loopz(gUnaryOp_exp2);
-	}
 #endif
 
 DEFINE_UNOP_FLOAT(exp10, pow(10., a))
@@ -1042,21 +959,11 @@ DEFINE_UNOP_FLOAT(exp10, pow(10., a))
 #else
 	DEFINE_UNOP_FLOATVV3(expm1, expm1(a), A.exp() - 1)
 #endif
-#ifndef DOCTEST_CONFIG_DISABLE
-	TEST_CASE("expm1 loopz") {
-		check_unop_loopz(gUnaryOp_expm1);
-	}
-#endif
 
 #ifdef SAPF_ACCELERATE
 	DEFINE_UNOP_FLOATVV(log, sc_log(a), vvlog)
 #else
 	DEFINE_UNOP_FLOATVV3(log, sc_log(a), A.log())
-#endif
-#ifndef DOCTEST_CONFIG_DISABLE
-	TEST_CASE("log loopz") {
-		check_unop_loopz(gUnaryOp_log);
-	}
 #endif
 
 #ifdef SAPF_ACCELERATE
@@ -1064,32 +971,17 @@ DEFINE_UNOP_FLOAT(exp10, pow(10., a))
 #else
 	DEFINE_UNOP_FLOATVV3(log2, sc_log2(a), A.log() / sc_log(2.0))
 #endif
-#ifndef DOCTEST_CONFIG_DISABLE
-	TEST_CASE("log2 loopz") {
-		check_unop_loopz(gUnaryOp_log2);
-	}
-#endif
 
 #ifdef SAPF_ACCELERATE
 	DEFINE_UNOP_FLOATVV(log10, sc_log10(a), vvlog10)
 #else
 	DEFINE_UNOP_FLOATVV3(log10, sc_log10(a), A.log10())
 #endif
-#ifndef DOCTEST_CONFIG_DISABLE
-	TEST_CASE("log10 loopz") {
-		check_unop_loopz(gUnaryOp_log10);
-	}
-#endif
 
 #ifdef SAPF_ACCELERATE
 	DEFINE_UNOP_FLOATVV(log1p, log1p(a), vvlog1p)
 #else
 	DEFINE_UNOP_FLOATVV3(log1p, log1p(a), A.log1p())
-#endif
-#ifndef DOCTEST_CONFIG_DISABLE
-	TEST_CASE("log1p loopz") {
-		check_unop_loopz(gUnaryOp_log1p);
-	}
 #endif
 
 
@@ -1104,21 +996,11 @@ DEFINE_UNOP_FLOAT(sinc, sc_sinc(a))
 #else
 	DEFINE_UNOP_FLOATVV3(sin, sin(a), A.sin())
 #endif
-#ifndef DOCTEST_CONFIG_DISABLE
-	TEST_CASE("sin loopz") {
-		check_unop_loopz(gUnaryOp_sin);
-	}
-#endif
 
 #ifdef SAPF_ACCELERATE
 	DEFINE_UNOP_FLOATVV(cos, cos(a), vvcos)
 #else
 	DEFINE_UNOP_FLOATVV3(cos, cos(a), A.cos())
-#endif
-#ifndef DOCTEST_CONFIG_DISABLE
-	TEST_CASE("cos loopz") {
-		check_unop_loopz(gUnaryOp_cos);
-	}
 #endif
 
 #ifdef SAPF_ACCELERATE
@@ -1126,21 +1008,12 @@ DEFINE_UNOP_FLOAT(sinc, sc_sinc(a))
 #else
 	DEFINE_UNOP_FLOATVV3(sin1, sin(a * kTwoPi), (kTwoPi * A).sin())
 #endif
-#ifndef DOCTEST_CONFIG_DISABLE
-	TEST_CASE("sin1 loopz") {
-		check_unop_loopz(gUnaryOp_sin1);
-	}
-#endif
+
 
 #ifdef SAPF_ACCELERATE
 	DEFINE_UNOP_FLOATVV2(cos1, cos(a * kTwoPi), Z b = kTwoPi; vDSP_vsmulD(const_cast<Z*>(aa), astride, &b, out, 1, n); vvcos(out, out, &n))
 #else
 	DEFINE_UNOP_FLOATVV3(cos1, cos(a * kTwoPi), (kTwoPi * A).cos())
-#endif
-#ifndef DOCTEST_CONFIG_DISABLE
-	TEST_CASE("cos1 loopz") {
-		check_unop_loopz(gUnaryOp_cos1);
-	}
 #endif
 
 #ifdef SAPF_ACCELERATE
@@ -1148,32 +1021,18 @@ DEFINE_UNOP_FLOAT(sinc, sc_sinc(a))
 #else
 	DEFINE_UNOP_FLOATVV3(tan, tan(a), A.tan())
 #endif
-#ifndef DOCTEST_CONFIG_DISABLE
-	TEST_CASE("tan loopz") {
-		check_unop_loopz(gUnaryOp_tan);
-	}
-#endif
 
 #ifdef SAPF_ACCELERATE
 	DEFINE_UNOP_FLOATVV(asin, asin(a), vvasin)
 #else
 	DEFINE_UNOP_FLOATVV3(asin, asin(a), A.asin())
 #endif
-#ifndef DOCTEST_CONFIG_DISABLE
-	TEST_CASE("asin loopz") {
-		check_unop_loopz(gUnaryOp_asin);
-	}
-#endif
+
 
 #ifdef SAPF_ACCELERATE
 	DEFINE_UNOP_FLOATVV(acos, acos(a), vvacos)
 #else
 	DEFINE_UNOP_FLOATVV3(acos, acos(a), A.acos())
-#endif
-#ifndef DOCTEST_CONFIG_DISABLE
-	TEST_CASE("acos loopz") {
-		check_unop_loopz(gUnaryOp_acos);
-	}
 #endif
 
 #ifdef SAPF_ACCELERATE
@@ -1181,21 +1040,11 @@ DEFINE_UNOP_FLOAT(sinc, sc_sinc(a))
 #else
 	DEFINE_UNOP_FLOATVV3(atan, atan(a), A.atan())
 #endif
-#ifndef DOCTEST_CONFIG_DISABLE
-	TEST_CASE("atan loopz") {
-		check_unop_loopz(gUnaryOp_atan);
-	}
-#endif
 
 #ifdef SAPF_ACCELERATE
 	DEFINE_UNOP_FLOATVV(sinh, sinh(a), vvsinh)
 #else
 	DEFINE_UNOP_FLOATVV3(sinh, sinh(a), A.sinh())
-#endif
-#ifndef DOCTEST_CONFIG_DISABLE
-	TEST_CASE("sinh loopz") {
-		check_unop_loopz(gUnaryOp_sinh);
-	}
 #endif
 
 #ifdef SAPF_ACCELERATE
@@ -1203,21 +1052,11 @@ DEFINE_UNOP_FLOAT(sinc, sc_sinc(a))
 #else
 	DEFINE_UNOP_FLOATVV3(cosh, cosh(a), A.cosh())
 #endif
-#ifndef DOCTEST_CONFIG_DISABLE
-	TEST_CASE("cosh loopz") {
-		check_unop_loopz(gUnaryOp_cosh);
-	}
-#endif
 
 #ifdef SAPF_ACCELERATE
 	DEFINE_UNOP_FLOATVV(tanh, tanh(a), vvtanh)
 #else
 	DEFINE_UNOP_FLOATVV3(tanh, tanh(a), A.tanh())
-#endif
-#ifndef DOCTEST_CONFIG_DISABLE
-	TEST_CASE("tanh loopz") {
-		check_unop_loopz(gUnaryOp_tanh);
-	}
 #endif
 
 #ifdef SAPF_ACCELERATE
@@ -1225,32 +1064,17 @@ DEFINE_UNOP_FLOAT(sinc, sc_sinc(a))
 #else
 	DEFINE_UNOP_FLOATVV3(asinh, asinh(a), A.asinh())
 #endif
-#ifndef DOCTEST_CONFIG_DISABLE
-	TEST_CASE("asinh loopz") {
-		check_unop_loopz(gUnaryOp_asinh, {-0.1, 0, .1});
-	}
-#endif
 
 #ifdef SAPF_ACCELERATE
 	DEFINE_UNOP_FLOATVV(acosh, acosh(a), vvacosh)
 #else
 	DEFINE_UNOP_FLOATVV3(acosh, acosh(a), A.acosh())
 #endif
-#ifndef DOCTEST_CONFIG_DISABLE
-	TEST_CASE("acosh loopz") {
-		check_unop_loopz(gUnaryOp_acosh, {-0.1, 0, .1});
-	}
-#endif
 
 #ifdef SAPF_ACCELERATE
 	DEFINE_UNOP_FLOATVV(atanh, atanh(a), vvatanh)
 #else
 	DEFINE_UNOP_FLOATVV3(atanh, atanh(a), A.atanh())
-#endif
-#ifndef DOCTEST_CONFIG_DISABLE
-	TEST_CASE("atanh loopz") {
-		check_unop_loopz(gUnaryOp_atanh, {-0.1, 0, .1});
-	}
 #endif
 
 #ifdef _WIN32
@@ -1324,6 +1148,68 @@ DEFINE_UNOP_FLOAT(scurve,   sc_scurve(a))
 DEFINE_UNOP_FLOAT(sigm,		a/sqrt(1.+a*a))
 
 DEFINE_UNOP_FLOAT(zapgremlins, zapgremlins(a))
+
+#ifndef DOCTEST_CONFIG_DISABLE
+	#define CHECK_ARR(expected, actual, n) \
+		do { \
+			LOOP(i,n) { CHECK(out[i] == doctest::Approx(expected[i]).epsilon(1e-9)); } \
+		} while (0)
+
+	void check_unop_loopz(UnaryOp& op, const std::array<Z, 3> in) {
+		double out[3];
+		double expected[3] = {op.op(in[0]), op.op(in[1]), op.op(in[2])};
+		op.loopz(3, in.data(), 1, out);
+		CHECK_ARR(expected, out, 3);
+	}
+
+	void check_unop_loopz(UnaryOp& op) {
+		check_unop_loopz(op, {1, 2, 3});
+	}
+
+	TEST_CASE_TEMPLATE("unop loopz matches op for input {1, 2, 3}", UnaryOp, 
+		UnaryOp_neg,
+		UnaryOp_abs,
+		UnaryOp_frac,
+		UnaryOp_floor,
+		UnaryOp_ceil,
+		UnaryOp_rint,
+		UnaryOp_recip,
+		UnaryOp_sqrt,
+		UnaryOp_rsqrt,
+		UnaryOp_ssq,
+		UnaryOp_sq,
+		UnaryOp_exp,
+		UnaryOp_exp2,
+		UnaryOp_expm1,
+		UnaryOp_log,
+		UnaryOp_log2,
+		UnaryOp_log10,
+		UnaryOp_log1p,
+		UnaryOp_sin,
+		UnaryOp_cos,
+		UnaryOp_sin1,
+		UnaryOp_cos1,
+		UnaryOp_tan,
+		UnaryOp_atan,
+		UnaryOp_sinh,
+		UnaryOp_cosh,
+		UnaryOp_tanh,
+		UnaryOp_asinh,
+		UnaryOp_acosh
+	) {
+		UnaryOp op = UnaryOp();
+		check_unop_loopz(op);
+	}
+
+	TEST_CASE_TEMPLATE("unop loopz matches op for input {-.1, 0, .1}", UnaryOp, 
+		UnaryOp_asin,
+		UnaryOp_acos,
+		UnaryOp_atanh
+	) {
+		UnaryOp op = UnaryOp();
+		check_unop_loopz(op, {-.1, 0, .1});
+	}
+#endif
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////
 
