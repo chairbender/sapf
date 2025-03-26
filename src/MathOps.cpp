@@ -709,6 +709,40 @@ ZArr zarr(const Z *vec, int n, int stride) {
 	BinaryOp_##NAME gBinaryOp_##NAME; \
 	BinaryOp* gBinaryOpPtr_##NAME = &gBinaryOp_##NAME; \
 	BINARY_OP_PRIM(NAME)
+
+// TODO: We could also vectorize the astride=1/bstride=0 (and vice versa) cases if desired
+//	since it's easy to change that via Eigen.
+#define DEFINE_BINOP_FLOATVV3(NAME, CODE, OP) \
+	struct BinaryOp_##NAME : public BinaryOp { \
+		virtual const char *Name() { return #NAME; } \
+		virtual double op(double a, double b) { return CODE; } \
+		virtual void loopz(int n, const Z *aa, int astride, const Z *bb, int bstride, Z *out) { \
+			if (astride == 1 && bstride == 1) { \
+				 ZARR_BINOP(OP, n, aa, astride, bb, bstride, out); \
+			} else { \
+				LOOP(i,n) { Z a = *aa; Z b = *bb; out[i] = CODE; aa += astride; bb += bstride; } \
+			} \
+		} \
+		virtual void pairsz(int n, Z& z, Z *aa, int astride, Z *out) { \
+			Z b = z; \
+			LOOP(i,n) { Z a = *aa; out[i] = CODE; b = a; aa += astride; } \
+			z = b; \
+		} \
+		virtual void scanz(int n, Z& z, Z *aa, int astride, Z *out) { \
+			Z a = z; \
+			LOOP(i,n) { Z b = *aa; out[i] = a = CODE; aa += astride; } \
+			z = a; \
+		} \
+		virtual void reducez(int n, Z& z, Z *aa, int astride) { \
+			Z a = z; \
+			LOOP(i,n) { Z b = *aa; a = CODE; aa += astride; } \
+			z = a; \
+		} \
+	}; \
+	BinaryOp_##NAME gBinaryOp_##NAME; \
+	BinaryOp* gBinaryOpPtr_##NAME = &gBinaryOp_##NAME; \
+	BINARY_OP_PRIM(NAME)
+	
 #endif // SAPF_ACCELERATE
 
 #define DEFINE_BINOP_INT(NAME, CODE) \
@@ -1130,8 +1164,14 @@ DEFINE_BINOP_BOOL_FLOAT(eq, a == b, strcmp(a, b) == 0)
 DEFINE_BINOP_BOOL_FLOAT(ne, a != b, strcmp(a, b) != 0)
 DEFINE_BINOP_FLOAT_STRING(cmp,  sc_cmp(a, b), sc_sgn(strcmp(a, b)))
 
-DEFINE_BINOP_FLOATVV1(copysign, copysign(a, b), vvcopysign(out, const_cast<Z*>(aa), bb, &n)) // bug in vForce.h requires const_cast
-DEFINE_BINOP_FLOATVV1(nextafter, nextafter(a, b), vvnextafter(out, const_cast<Z*>(aa), bb, &n)) // bug in vForce.h requires const_cast
+#ifdef SAPF_ACCELERATE
+	DEFINE_BINOP_FLOATVV1(copysign, copysign(a, b), vvcopysign(out, const_cast<Z*>(aa), bb, &n)) // bug in vForce.h requires const_cast
+	DEFINE_BINOP_FLOATVV1(nextafter, nextafter(a, b), vvnextafter(out, const_cast<Z*>(aa), bb, &n)) // bug in vForce.h requires const_cast
+#else
+	DEFINE_BINOP_FLOATVV3(copysign, copysign(a, b), A.abs() * B.sign()) 
+	// TODO: actually implement
+	DEFINE_BINOP_FLOATVV3(nextafter, nextafter(a, b), A.abs() * B.sign())
+#endif
 
 
 // identity optimizations of basic operators.
@@ -1795,6 +1835,32 @@ DEFINE_BINOP_FLOAT(fold0, sc_fold(a, 0., b))
 DEFINE_BINOP_FLOAT(round, sc_round(a, b))
 DEFINE_BINOP_FLOAT(roundUp, sc_roundUp(a, b))
 DEFINE_BINOP_FLOAT(trunc, sc_trunc(a, b))
+
+#ifndef DOCTEST_CONFIG_DISABLE
+	void check_binop_loopz(BinaryOp& op, const std::array<Z, 3> a, const std::array<Z, 3> b) {
+		double out[3];
+		double expected[3] = {op.op(a[0], b[0]), op.op(a[1], b[1]), op.op(a[2], b[2])};
+		op.loopz(3, a.data(), 1, b.data(), 1, out);
+		CHECK_ARR(expected, out, 3);
+	}
+
+	void check_binop_loopz(BinaryOp& op) {
+		check_binop_loopz(op, {1, 2, 3}, {4, 5, 6});
+	}
+
+	TEST_CASE_TEMPLATE("binop loopz matches op for input {1, 2, 3} / {4, 5, 6} and stride 1", BinaryOp, 
+		BinaryOp_copysign
+	) {
+		BinaryOp op = BinaryOp();
+		check_binop_loopz(op);
+	}
+
+	TEST_CASE("binop copysign negative handling") {
+		check_binop_loopz(gBinaryOp_copysign, {-1, -2, -3}, {4, 5, 6});
+		check_binop_loopz(gBinaryOp_copysign, {1, 2, 3}, {-4, -5, -6});
+		check_binop_loopz(gBinaryOp_copysign, {-1, -2, -3}, {-4, -5, -6});
+	}
+#endif
 
 
 #define DEFN(FUNNAME, OPNAME, HELP) 	vm.def(OPNAME, 1, 1, FUNNAME##_, "(x --> z) " HELP);
