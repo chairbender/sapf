@@ -21,10 +21,10 @@
 #ifdef SAPF_ACCELERATE
 #include <Accelerate/Accelerate.h>
 #else
-// TODO
+#include <Eigen/Dense>
 #endif
 #include "doctest.h"
-#include <Eigen/Dense>
+
 
 
 
