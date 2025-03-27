@@ -22,6 +22,7 @@
 #include <Accelerate/Accelerate.h>
 #else
 #include <Eigen/Dense>
+#include <Eigen/Dense>
 #endif
 #include "doctest.h"
 
