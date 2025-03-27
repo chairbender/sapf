@@ -29,8 +29,11 @@
 #ifdef SAPF_ACCELERATE
 #include <Accelerate/Accelerate.h>
 #else
-// TODO
+// TODO: actually needed still?
+#include <Eigen/Dense>
+#include "ZArr.hpp"
 #endif
+#include "doctest.h"
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
@@ -1151,7 +1154,6 @@ static void impulse_(Thread& th, Prim* prim)
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-
 struct SinOsc : public OneInputUGen<SinOsc>
 {
 	Z phase;
@@ -1177,15 +1179,70 @@ struct SinOsc : public OneInputUGen<SinOsc>
 		vvsin(out, out, &n);
 #else
 		for (int i = 0; i < n; ++i) {
+			out[i] = phase;
+			phase += *freq * freqmul;
+			freq += freqStride;
+			if (phase >= kTwoPi) phase -= kTwoPi;
+			else if (phase < 0.) phase += kTwoPi;
+		}
+		ZArr A = zarr(out, n, 1);
+		A = A.sin();
+#endif
+	}
+};
+
+#ifndef DOCTEST_CONFIG_DISABLE
+
+	// non-vectorized version for comparison
+	void sinosc_calc(Z phase, Z freqmul, int n, Z* out, Z* freq, int freqStride) {
+		for (int i = 0; i < n; ++i) {
 			out[i] = sin(phase);
 			phase += *freq * freqmul;
 			freq += freqStride;
 			if (phase >= kTwoPi) phase -= kTwoPi;
 			else if (phase < 0.) phase += kTwoPi;
 		}
-#endif
 	}
-};
+
+	TEST_CASE("SinOsc") {
+		Z out[100];
+		Z freq[100];
+		Z expected[100];
+		Z startFreq = 400;
+		Z freqmul = 2 * M_PI * (1 / 44000);
+		Z phase;
+		int freqStride;
+		Thread th;
+		th.rate.radiansPerSample = freqmul;
+		// freq will oscillate
+		LOOP(i,100) { freq[i] = sin(i/100.)*400 + 200; }
+
+		SUBCASE("0 phase, 1 freqStride") {
+			phase = 0;
+			freqStride = 1;
+		}
+
+		SUBCASE(".3 phase, 1 freqStride") {
+			phase = .3;
+			freqStride = 1;
+		}
+
+		SUBCASE("0 phase, 0 freqStride") {
+			phase = 0;
+			freqStride = 0;
+		}
+
+		SUBCASE(".3 phase, 0 freqStride") {
+			phase = .3;
+			freqStride = 0;
+		}
+
+		SinOsc osc(th, phase, startFreq);
+		osc.calc(100, out, freq, freqStride);
+		sinosc_calc(phase, freqmul, 100, expected, freq, freqStride);
+		CHECK_ARR(expected, out, 100);
+	}
+#endif
 
 struct SinOsc2 : public OneInputUGen<SinOsc2>
 {

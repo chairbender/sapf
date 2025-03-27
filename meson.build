@@ -37,6 +37,7 @@ sources = [
   'src/Types.cpp',
   'src/UGen.cpp',
   'src/VM.cpp',
+  'src/ZArr.cpp',
 ]
 deps = []
 cpp_args = ['-std=c++17']

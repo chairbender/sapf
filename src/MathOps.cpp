@@ -21,8 +21,9 @@
 #ifdef SAPF_ACCELERATE
 #include <Accelerate/Accelerate.h>
 #else
+// TODO: actually needed still?
 #include <Eigen/Dense>
-#include <Eigen/Dense>
+#include "ZArr.hpp"
 #endif
 #include "doctest.h"
 
@@ -438,19 +439,6 @@ static void DoIReduce(Thread& th, BinaryOp* op)
 	UnaryOp* gUnaryOpPtr_##NAME = &gUnaryOp_##NAME; \
 	UNARY_OP_PRIM(NAME)
 #else
-#if SAMPLE_IS_DOUBLE
-	typedef Eigen::Map<Eigen::ArrayXd, 0, Eigen::InnerStride<>> ZArr;
-#else
-	typedef Eigen::Map<Eigen::ArrayXf, 0, Eigen::InnerStride<>> ZArr;
-#endif
-
-ZArr zarr(const Z *vec, int n, int stride) {
-	#if SAMPLE_IS_DOUBLE
-		return ZArr((double *)vec, n, Eigen::InnerStride<>(stride));
-	#else
-		return ZArr((float *)vec, n, Eigen::InnerStride<>(stride));
-	#endif
-}
 
 #define ZARR_BINOP(op, n, aa, astride, bb, bstride, out) \
 	do { \
@@ -1023,10 +1011,6 @@ DEFINE_UNOP_FLOAT(sigm,		a/sqrt(1.+a*a))
 DEFINE_UNOP_FLOAT(zapgremlins, zapgremlins(a))
 
 #ifndef DOCTEST_CONFIG_DISABLE
-	#define CHECK_ARR(expected, actual, n) \
-		do { \
-			LOOP(i,n) { CHECK(out[i] == doctest::Approx(expected[i]).epsilon(1e-9)); } \
-		} while (0)
 
 	void check_unop_loopz(UnaryOp& op, const std::array<Z, 3> in) {
 		double out[3];
