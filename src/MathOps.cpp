@@ -882,8 +882,7 @@ DEFINE_UNOP_FLOAT(pow9, sc_ninth(a))
 #endif
 DEFINE_UNOP_FLOAT(exp10, pow(10., a))
 
-// TODO: Eigen doesn't provide a vectorized logb. We could use XSIMD instead to 
-// implement it ourselves if needed
+// TODO: Not vectorized in Eigen - possibly use XSIMD?
 #ifdef SAPF_ACCELERATE
 	DEFINE_UNOP_FLOATVV(logb, logb(a), vvlogb)
 #else
