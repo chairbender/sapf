@@ -205,7 +205,7 @@ testable_exe_native_optimized = executable(
   'test_optimized',
   test_sources,
   include_directories: [include_directories('include')],
-  dependencies: deps,
+  dependencies: test_deps,
   cpp_args : cpp_args + ['-O3', '-march=native'],
   link_args : link_args,
   build_by_default: false
