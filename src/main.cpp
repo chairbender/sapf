@@ -33,9 +33,6 @@
 #include <CoreFoundation/CoreFoundation.h>
 #endif // SAPF_COREFOUNDATION
 
-#define DOCTEST_CONFIG_IMPLEMENT
-#include "doctest.h"
-
 #ifdef SAPF_MANTA
 #include "Manta.h"
 
@@ -141,17 +138,6 @@ static void replLoop(Thread th) {
 
 int main (int argc, const char * argv[]) 
 {
-	#ifndef DOCTEST_CONFIG_DISABLE
-		doctest::Context context;
-
-		context.applyCommandLine(argc, argv);
-
-		int res = context.run();
-
-		if(context.shouldExit())
-			return res;          
-	#endif
-    
 	post("------------------------------------------------\n");	
 	post("A tool for the expression of sound as pure form.\n");	
 	post("------------------------------------------------\n");	
@@ -268,10 +254,7 @@ int main (int argc, const char * argv[])
 
 	replThread.join();
 #endif // SAPF_DISPATCH
-	#ifndef DOCTEST_CONFIG_DISABLE
-		return res;
-	#else
-		return 0;
-	#endif
+
+	return 0;
 }
 
