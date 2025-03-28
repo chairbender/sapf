@@ -1034,7 +1034,7 @@ DEFINE_BINOP_FLOAT_STRING(cmp,  sc_cmp(a, b), sc_sgn(strcmp(a, b)))
 	DEFINE_BINOP_FLOATVV1(nextafter, nextafter(a, b), vvnextafter(out, const_cast<Z*>(aa), bb, &n)) // bug in vForce.h requires const_cast
 #else
 	DEFINE_BINOP_FLOATVV(copysign, copysign(a, b), A.abs() * B.sign()) 
-	// TODO: Not supported in Eigen. Could use XSIMD to write ourselves if needed.
+	// TODO: Not vectorized in Eigen - possibly use XSIMD?
 	DEFINE_BINOP_FLOAT(nextafter, nextafter(a, b))
 #endif
 
