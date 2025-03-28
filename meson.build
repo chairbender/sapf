@@ -137,7 +137,8 @@ executable(
   include_directories: [include_directories('include')],
   dependencies: deps,
   cpp_args : release_cpp_args + ['-march=x86-64'],
-  link_args : link_args
+  link_args : link_args,
+  build_by_default: false
 )
 
 # for somewhat older x86 CPUs (2008ish)
@@ -147,7 +148,8 @@ executable(
   include_directories: [include_directories('include')],
   dependencies: deps,
   cpp_args : release_cpp_args + ['-march=x86-64-v2'],
-  link_args : link_args
+  link_args : link_args,
+  build_by_default: false
 )
 
 # for more cutting edge x86 cpus
@@ -157,7 +159,8 @@ executable(
   include_directories: [include_directories('include')],
   dependencies: deps,
   cpp_args : release_cpp_args + ['-march=x86-64-v3'],
-  link_args : link_args
+  link_args : link_args,
+  build_by_default: false
 )
 
 # support M1 chip and newer
@@ -167,7 +170,8 @@ executable(
   include_directories: [include_directories('include')],
   dependencies: deps,
   cpp_args : release_cpp_args + ['-march=armv8.4-a', '-mcpu=apple-m1'],
-  link_args : link_args
+  link_args : link_args,
+  build_by_default: false
 )
 
 # support M3 chip
@@ -177,7 +181,8 @@ executable(
   include_directories: [include_directories('include')],
   dependencies: deps,
   cpp_args : release_cpp_args + ['-march=armv8.5-a', '-mcpu=apple-m3'],
-  link_args : link_args
+  link_args : link_args,
+  build_by_default: false
 )
 
 # tests
@@ -191,7 +196,8 @@ testable_exe_native_unoptimized = executable(
   include_directories: [include_directories('include')],
   dependencies: test_deps,
   cpp_args : cpp_args,
-  link_args : link_args
+  link_args : link_args,
+  build_by_default: false
 )
 
 # exe with testing enabled with all optimizations for the native system
@@ -201,7 +207,8 @@ testable_exe_native_optimized = executable(
   include_directories: [include_directories('include')],
   dependencies: deps,
   cpp_args : cpp_args + ['-O3', '-march=native'],
-  link_args : link_args
+  link_args : link_args,
+  build_by_default: false
 )
 
 test('unoptimized', testable_exe_native_unoptimized)
