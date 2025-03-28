@@ -113,10 +113,12 @@ if get_option('manta')
 endif
 
 release_cpp_args = cpp_args + ['-O3']
+# main should only be in release build because otherwise it conflicts with the main
+# method added by doctest in test builds
 release_sources = sources + 'src/main.cpp'
 
 # build targeting the native system this was built on, with optimizations (this is what people 
-# building on their own machine should use for optimal performance)
+# building on their own machine should use for optimal performance and is therefore the default)
 executable(
   'sapf',
   release_sources,
@@ -128,7 +130,8 @@ executable(
 
 # The below builds target specific architectures. Because this program uses
 # SIMD, the best performance is achieved when a user uses the most recent architecture supported
-# by their CPU. Users will get the best results if they build the library themselves however (exe_native).
+# by their CPU. Users will get the best results if they build the 
+# library themselves however (target `sapf` above)
 
 # should have maximum compatibility with ancient x86_64 cpus
 executable(
