@@ -106,6 +106,36 @@ Example `.vscode/launch.json`
                     "ignoreFailures": true
                 }
             ]
+        },
+        {
+            "name": "(gdb) Debug Test",
+            "type": "cppdbg",
+            "request": "launch",
+            "program": "${workspaceRoot}/build/test_unoptimized.exe",
+            "args": [],
+            "stopAtEntry": false,
+            "cwd": "${workspaceRoot}/build",
+            "environment": [
+                { "name": "MSYSTEM", "value": "UCRT64" },
+                { "name": "MSYS2_PATH_TYPE", "value": "inherit" },
+                { "name": "PATH", "value": "C:\\msys64\\ucrt64\\bin;${env:PATH}" }
+            ],
+            "externalConsole": false,
+            "MIMode": "gdb",
+            "miDebuggerPath": "C:\\msys64\\ucrt64\\bin\\gdb.exe",
+            "setupCommands": [
+                {
+                    "description": "Enable pretty-printing for gdb",
+                    "text": "-enable-pretty-printing",
+                    "ignoreFailures": true
+                },
+                {
+                    "description": "Set Disassembly Flavor to Intel",
+                    "text": "-gdb-set disassembly-flavor intel",
+                    "ignoreFailures": true
+                }
+            ],
+            "preLaunchTask": "Meson: Build test_unoptimized:executable"
         }
     ]
 }

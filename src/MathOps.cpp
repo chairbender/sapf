@@ -23,10 +23,6 @@
 #else
 #include <Eigen/Dense>
 #endif
-#include "doctest.h"
-
-
-
 
 V BinaryOp::makeVList(Thread& th, Arg a, Arg b)
 {
@@ -1202,58 +1198,6 @@ DEFINE_BINOP_FLOATVV1(nextafter, nextafter(a, b), vvnextafter(out, const_cast<Z*
 	BinaryOp* gBinaryOpPtr_plus = &gBinaryOp_plus;
 	BINARY_OP_PRIM(plus)
 
-
-#ifndef DOCTEST_CONFIG_DISABLE
-	TEST_CASE("BinaryOp_plus loopz") {
-		double aa[] = {1, 2, 3};
-		double bb[] = {4, 5, 6};
-		double zero[] = {0};
-		double out[3];
-
-		SUBCASE("stride 1") {
-			double expected[] = {5, 7, 9};
-			gBinaryOp_plus.loopz(3, aa, 1, bb, 1, out);
-
-			CHECK_ARR(expected, out, 3);
-		}
-
-		SUBCASE("stride 0") {
-			double expected[] = {5, 5, 5};
-			gBinaryOp_plus.loopz(3, aa, 0, bb, 0, out);
-
-			CHECK_ARR(expected, out, 3);
-		}
-
-		SUBCASE("astride 1 bstride 0") {
-			double expected[] = {5, 6, 7};
-			gBinaryOp_plus.loopz(3, aa, 1, bb, 0, out);
-
-			CHECK_ARR(expected, out, 3);
-		}
-
-		SUBCASE("astride 0 bstride 1") {
-			double expected[] = {5, 6, 7};
-			gBinaryOp_plus.loopz(3, aa, 0, bb, 1, out);
-
-			CHECK_ARR(expected, out, 3);
-		}
-
-		SUBCASE("astride 0 a = 0") {
-			double expected[] = {4, 5, 6};
-			gBinaryOp_plus.loopz(3, zero, 0, bb, 1, out);
-
-			CHECK_ARR(expected, out, 3);
-		}
-
-		SUBCASE("bstride 0 b = 0") {
-			double expected[] = {1, 2, 3};
-			gBinaryOp_plus.loopz(3, aa, 1, zero, 0, out);
-
-			CHECK_ARR(expected, out, 3);
-		}
-	}
-#endif
-
 	struct BinaryOp_plus_link : public BinaryOp {
 		virtual const char *Name() { return "plus"; }
 		virtual double op(double a, double b) { return a + b; }
@@ -1320,57 +1264,6 @@ DEFINE_BINOP_FLOATVV1(nextafter, nextafter(a, b), vvnextafter(out, const_cast<Z*
 	BinaryOp_plus_link gBinaryOp_plus_link;
 	BinaryOp* gBinaryOpPtr_plus_link = &gBinaryOp_plus_link;
 	BINARY_OP_PRIM(plus_link)
-
-#ifndef DOCTEST_CONFIG_DISABLE
-	TEST_CASE("BinaryOp_plus loopz") {
-		double aa[] = {1, 2, 3};
-		double bb[] = {4, 5, 6};
-		double zero[] = {0};
-		double out[3];
-
-		SUBCASE("stride 1") {
-			double expected[] = {5, 7, 9};
-			gBinaryOp_plus_link.loopz(3, aa, 1, bb, 1, out);
-
-			CHECK_ARR(expected, out, 3);
-		}
-
-		SUBCASE("stride 0") {
-			double expected[] = {5, 5, 5};
-			gBinaryOp_plus_link.loopz(3, aa, 0, bb, 0, out);
-
-			CHECK_ARR(expected, out, 3);
-		}
-
-		SUBCASE("astride 1 bstride 0") {
-			double expected[] = {5, 6, 7};
-			gBinaryOp_plus_link.loopz(3, aa, 1, bb, 0, out);
-
-			CHECK_ARR(expected, out, 3);
-		}
-
-		SUBCASE("astride 0 bstride 1") {
-			double expected[] = {5, 6, 7};
-			gBinaryOp_plus_link.loopz(3, aa, 0, bb, 1, out);
-
-			CHECK_ARR(expected, out, 3);
-		}
-
-		SUBCASE("astride 0 a = 0") {
-			double expected[] = {4, 5, 6};
-			gBinaryOp_plus_link.loopz(3, zero, 0, bb, 1, out);
-
-			CHECK_ARR(expected, out, 3);
-		}
-
-		SUBCASE("bstride 0 b = 0") {
-			double expected[] = {1, 2, 3};
-			gBinaryOp_plus_link.loopz(3, aa, 1, zero, 0, out);
-
-			CHECK_ARR(expected, out, 3);
-		}
-	}
-#endif
 
 	struct BinaryOp_minus : public BinaryOp {
 		virtual const char *Name() { return "minus"; }
@@ -1440,57 +1333,6 @@ DEFINE_BINOP_FLOATVV1(nextafter, nextafter(a, b), vvnextafter(out, const_cast<Z*
 	BinaryOp_minus gBinaryOp_minus;
 	BinaryOp* gBinaryOpPtr_minus = &gBinaryOp_minus;
 	BINARY_OP_PRIM(minus)
-
-#ifndef DOCTEST_CONFIG_DISABLE	
-	TEST_CASE("BinaryOp_minus loopz") {
-		double aa[] = {1, 2, 3};
-		double bb[] = {4, 5, 6};
-		double zero[] = {0};
-		double out[3];
-
-		SUBCASE("stride 1") {
-			double expected[] = {-3, -3, -3};
-			gBinaryOp_minus.loopz(3, aa, 1, bb, 1, out);
-
-			CHECK_ARR(expected, out, 3);
-		}
-
-		SUBCASE("stride 0") {
-			double expected[] = {-3, -3, -3};
-			gBinaryOp_minus.loopz(3, aa, 0, bb, 0, out);
-
-			CHECK_ARR(expected, out, 3);
-		}
-
-		SUBCASE("astride 1 bstride 0") {
-			double expected[] = {-3, -2, -1};
-			gBinaryOp_minus.loopz(3, aa, 1, bb, 0, out);
-
-			CHECK_ARR(expected, out, 3);
-		}
-
-		SUBCASE("astride 0 bstride 1") {
-			double expected[] = {-3, -4, -5};
-			gBinaryOp_minus.loopz(3, aa, 0, bb, 1, out);
-
-			CHECK_ARR(expected, out, 3);
-		}
-
-		SUBCASE("astride 0 a = 0") {
-			double expected[] = {-4, -5, -6};
-			gBinaryOp_minus.loopz(3, zero, 0, bb, 1, out);
-
-			CHECK_ARR(expected, out, 3);
-		}
-
-		SUBCASE("bstride 0 b = 0") {
-			double expected[] = {1, 2, 3};
-			gBinaryOp_minus.loopz(3, aa, 1, zero, 0, out);
-
-			CHECK_ARR(expected, out, 3);
-		}
-	}
-#endif
 
 	struct BinaryOp_mul : public BinaryOp {
 		virtual const char *Name() { return "mul"; }
@@ -1578,57 +1420,6 @@ DEFINE_BINOP_FLOATVV1(nextafter, nextafter(a, b), vvnextafter(out, const_cast<Z*
 	BinaryOp* gBinaryOpPtr_mul = &gBinaryOp_mul;
 	BINARY_OP_PRIM(mul)
 
-#ifndef DOCTEST_CONFIG_DISABLE
-	TEST_CASE("BinaryOp_mul loopz") {
-		double aa[] = {1, 2, 3};
-		double bb[] = {4, 5, 6};
-		double one[] = {1};
-		double out[3];
-
-		SUBCASE("stride 1") {
-			double expected[] = {4, 10, 18};
-			gBinaryOp_mul.loopz(3, aa, 1, bb, 1, out);
-
-			CHECK_ARR(expected, out, 3);
-		}
-
-		SUBCASE("stride 0") {
-			double expected[] = {4, 4, 4};
-			gBinaryOp_mul.loopz(3, aa, 0, bb, 0, out);
-
-			CHECK_ARR(expected, out, 3);
-		}
-
-		SUBCASE("astride 1 bstride 0") {
-			double expected[] = {4, 8, 12};
-			gBinaryOp_mul.loopz(3, aa, 1, bb, 0, out);
-
-			CHECK_ARR(expected, out, 3);
-		}
-
-		SUBCASE("astride 0 bstride 1") {
-			double expected[] = {4, 5, 6};
-			gBinaryOp_mul.loopz(3, aa, 0, bb, 1, out);
-
-			CHECK_ARR(expected, out, 3);
-		}
-
-		SUBCASE("astride 0 a = 1") {
-			double expected[] = {4, 5, 6};
-			gBinaryOp_mul.loopz(3, one, 0, bb, 1, out);
-
-			CHECK_ARR(expected, out, 3);
-		}
-
-		SUBCASE("bstride 0 b = 1") {
-			double expected[] = {1, 2, 3};
-			gBinaryOp_mul.loopz(3, aa, 1, one, 0, out);
-
-			CHECK_ARR(expected, out, 3);
-		}
-	}
-#endif
-
 	struct BinaryOp_div : public BinaryOp {
 		virtual const char *Name() { return "div"; }
 		virtual double op(double a, double b) { return a / b; }
@@ -1686,57 +1477,6 @@ DEFINE_BINOP_FLOATVV1(nextafter, nextafter(a, b), vvnextafter(out, const_cast<Z*
 	BinaryOp_div gBinaryOp_div;
 	BinaryOp* gBinaryOpPtr_div = &gBinaryOp_div;
 	BINARY_OP_PRIM(div)
-
-#ifndef DOCTEST_CONFIG_DISABLE
-	TEST_CASE("BinaryOp_div loopz") {
-		double aa[] = {1, 2, 3};
-		double bb[] = {4, 5, 6};
-		double one[] = {1};
-		double out[3];
-
-		SUBCASE("stride 1") {
-			double expected[] = {.25, .4, .5};
-			gBinaryOp_div.loopz(3, aa, 1, bb, 1, out);
-
-			CHECK_ARR(expected, out, 3);
-		}
-
-		SUBCASE("stride 0") {
-			double expected[] = {.25, .25, .25};
-			gBinaryOp_div.loopz(3, aa, 0, bb, 0, out);
-
-			CHECK_ARR(expected, out, 3);
-		}
-
-		SUBCASE("astride 1 bstride 0") {
-			double expected[] = {.25, .5, .75};
-			gBinaryOp_div.loopz(3, aa, 1, bb, 0, out);
-
-			CHECK_ARR(expected, out, 3);
-		}
-
-		SUBCASE("astride 0 bstride 1") {
-			double expected[] = {.25, .2, 1./6};
-			gBinaryOp_div.loopz(3, aa, 0, bb, 1, out);
-
-			CHECK_ARR(expected, out, 3);
-		}
-
-		SUBCASE("astride 0 a = 1") {
-			double expected[] = {.25, .2, 1./6};
-			gBinaryOp_div.loopz(3, one, 0, bb, 1, out);
-
-			CHECK_ARR(expected, out, 3);
-		}
-
-		SUBCASE("bstride 0 b = 1") {
-			double expected[] = {1, 1, 1};
-			gBinaryOp_div.loopz(3, aa, 1, one, 0, out);
-
-			CHECK_ARR(expected, out, 3);
-		}
-	}
-#endif
 
 DEFINE_BINOP_FLOAT(mod, sc_fmod(a, b))
 DEFINE_BINOP_FLOAT(remainder, remainder(a, b))
