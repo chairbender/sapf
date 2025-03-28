@@ -652,12 +652,18 @@ ZArr zarr(const Z *vec, int n, int stride) {
 	BinaryOp* gBinaryOpPtr_##NAME = &gBinaryOp_##NAME; \
 	BINARY_OP_PRIM(NAME)
 #else
-#define DEFINE_BINOP_FLOATVV(NAME, CODE, VVCODE) \
+// TODO: We could also vectorize the astride=1/bstride=0 (and vice versa) cases if desired
+//	since it's easy to change that via Eigen.
+#define DEFINE_BINOP_FLOATVV(NAME, CODE, OP) \
 	struct BinaryOp_##NAME : public BinaryOp { \
 		virtual const char *Name() { return #NAME; } \
 		virtual double op(double a, double b) { return CODE; } \
 		virtual void loopz(int n, const Z *aa, int astride, const Z *bb, int bstride, Z *out) { \
-                        LOOP(i,n) { Z a = *aa; Z b = *bb; out[i] = CODE; aa += astride; bb += bstride; } \
+			if (astride == 1 && bstride == 1) { \
+				 ZARR_BINOP(OP, n, aa, astride, bb, bstride, out); \
+			} else { \
+				LOOP(i,n) { Z a = *aa; Z b = *bb; out[i] = CODE; aa += astride; bb += bstride; } \
+			} \
 		} \
 		virtual void pairsz(int n, Z& z, Z *aa, int astride, Z *out) { \
 			Z b = z; \
@@ -678,33 +684,7 @@ ZArr zarr(const Z *vec, int n, int stride) {
 	BinaryOp_##NAME gBinaryOp_##NAME; \
 	BinaryOp* gBinaryOpPtr_##NAME = &gBinaryOp_##NAME; \
 	BINARY_OP_PRIM(NAME)
-
-#define DEFINE_BINOP_FLOATVV1(NAME, CODE, VVCODE) \
-	struct BinaryOp_##NAME : public BinaryOp { \
-		virtual const char *Name() { return #NAME; } \
-		virtual double op(double a, double b) { return CODE; } \
-		virtual void loopz(int n, const Z *aa, int astride, const Z *bb, int bstride, Z *out) { \
-			LOOP(i,n) { Z a = *aa; Z b = *bb; out[i] = CODE; aa += astride; bb += bstride; } \
-		} \
-		virtual void pairsz(int n, Z& z, Z *aa, int astride, Z *out) { \
-			Z b = z; \
-			LOOP(i,n) { Z a = *aa; out[i] = CODE; b = a; aa += astride; } \
-			z = b; \
-		} \
-		virtual void scanz(int n, Z& z, Z *aa, int astride, Z *out) { \
-			Z a = z; \
-			LOOP(i,n) { Z b = *aa; out[i] = a = CODE; aa += astride; } \
-			z = a; \
-		} \
-		virtual void reducez(int n, Z& z, Z *aa, int astride) { \
-			Z a = z; \
-			LOOP(i,n) { Z b = *aa; a = CODE; aa += astride; } \
-			z = a; \
-		} \
-	}; \
-	BinaryOp_##NAME gBinaryOp_##NAME; \
-	BinaryOp* gBinaryOpPtr_##NAME = &gBinaryOp_##NAME; \
-	BINARY_OP_PRIM(NAME)
+	
 #endif // SAPF_ACCELERATE
 
 #define DEFINE_BINOP_INT(NAME, CODE) \
@@ -1049,9 +1029,14 @@ DEFINE_BINOP_BOOL_FLOAT(eq, a == b, strcmp(a, b) == 0)
 DEFINE_BINOP_BOOL_FLOAT(ne, a != b, strcmp(a, b) != 0)
 DEFINE_BINOP_FLOAT_STRING(cmp,  sc_cmp(a, b), sc_sgn(strcmp(a, b)))
 
-DEFINE_BINOP_FLOATVV1(copysign, copysign(a, b), vvcopysign(out, const_cast<Z*>(aa), bb, &n)) // bug in vForce.h requires const_cast
-DEFINE_BINOP_FLOATVV1(nextafter, nextafter(a, b), vvnextafter(out, const_cast<Z*>(aa), bb, &n)) // bug in vForce.h requires const_cast
-
+#ifdef SAPF_ACCELERATE
+	DEFINE_BINOP_FLOATVV1(copysign, copysign(a, b), vvcopysign(out, const_cast<Z*>(aa), bb, &n)) // bug in vForce.h requires const_cast
+	DEFINE_BINOP_FLOATVV1(nextafter, nextafter(a, b), vvnextafter(out, const_cast<Z*>(aa), bb, &n)) // bug in vForce.h requires const_cast
+#else
+	DEFINE_BINOP_FLOATVV(copysign, copysign(a, b), A.abs() * B.sign()) 
+	// TODO: Not vectorized in Eigen - possibly use XSIMD?
+	DEFINE_BINOP_FLOAT(nextafter, nextafter(a, b))
+#endif
 
 // identity optimizations of basic operators.
 
@@ -1407,8 +1392,15 @@ DEFINE_BINOP_FLOAT(remainder, remainder(a, b))
 DEFINE_BINOP_INT(idiv, sc_div(a, b))
 DEFINE_BINOP_INT(imod, sc_imod(a, b))
 
-DEFINE_BINOP_FLOATVV1(pow, sc_pow(a, b), vvpow(out, bb, aa, &n))
-DEFINE_BINOP_FLOATVV1(atan2, atan2(a, b), vvatan2(out, aa, bb, &n))
+#ifdef SAPF_ACCELERATE
+	DEFINE_BINOP_FLOATVV1(pow, sc_pow(a, b), vvpow(out, bb, aa, &n))
+	DEFINE_BINOP_FLOATVV1(atan2, atan2(a, b), vvatan2(out, aa, bb, &n))
+#else
+	DEFINE_BINOP_FLOATVV(pow, sc_pow(a, b), pow(A, B))
+	// TODO: Not supported in Eigen until next release (whatever is after 3.4.0). Could use XSIMD if desired.
+	DEFINE_BINOP_FLOAT(atan2, atan2(a, b))
+#endif
+
 
 #ifdef _WIN32
 	DEFINE_BINOP_FLOAT(Jn, _jn((int)b, a))
@@ -1418,14 +1410,23 @@ DEFINE_BINOP_FLOATVV1(atan2, atan2(a, b), vvatan2(out, aa, bb, &n))
 	DEFINE_BINOP_FLOAT(Yn, yn((int)b, a))
 #endif
 
-DEFINE_BINOP_FLOATVV(min, fmin(a, b), vDSP_vminD(const_cast<Z*>(aa), astride, const_cast<Z*>(bb), bstride, out, 1, n))
-DEFINE_BINOP_FLOATVV(max, fmax(a, b), vDSP_vmaxD(const_cast<Z*>(aa), astride, const_cast<Z*>(bb), bstride, out, 1, n))
+#ifdef SAPF_ACCELERATE
+	DEFINE_BINOP_FLOATVV(min, fmin(a, b), vDSP_vminD(const_cast<Z*>(aa), astride, const_cast<Z*>(bb), bstride, out, 1, n))
+	DEFINE_BINOP_FLOATVV(max, fmax(a, b), vDSP_vmaxD(const_cast<Z*>(aa), astride, const_cast<Z*>(bb), bstride, out, 1, n))
+#else
+	DEFINE_BINOP_FLOATVV(min, fmin(a, b), A.min(B))
+	DEFINE_BINOP_FLOATVV(max, fmax(a, b), A.max(B))
+#endif
 DEFINE_BINOP_FLOAT(dim, fdim(a, b))
 DEFINE_BINOP_FLOAT(xor, fdim(a, b))
 
 DEFINE_BINOP_FLOAT(avg2, (a + b) * .5)
 DEFINE_BINOP_FLOAT(absdif, fabs(a - b))
-DEFINE_BINOP_FLOATVV(hypot, hypot(a, b), vDSP_vdistD(const_cast<Z*>(aa), astride, const_cast<Z*>(bb), bstride, out, 1, n))
+#ifdef SAPF_ACCELERATE
+	DEFINE_BINOP_FLOATVV(hypot, hypot(a, b), vDSP_vdistD(const_cast<Z*>(aa), astride, const_cast<Z*>(bb), bstride, out, 1, n))
+#else
+	DEFINE_BINOP_FLOATVV(hypot, hypot(a, b), (A.square() + B.square()).sqrt())
+#endif
 DEFINE_BINOP_FLOAT(sumsq, a*a + b*b)
 DEFINE_BINOP_FLOAT(difsq, a*a - b*b)
 DEFINE_BINOP_FLOAT(sqsum, sc_squared(a + b))
@@ -1458,7 +1459,6 @@ DEFINE_BINOP_FLOAT(fold0, sc_fold(a, 0., b))
 DEFINE_BINOP_FLOAT(round, sc_round(a, b))
 DEFINE_BINOP_FLOAT(roundUp, sc_roundUp(a, b))
 DEFINE_BINOP_FLOAT(trunc, sc_trunc(a, b))
-
 
 #define DEFN(FUNNAME, OPNAME, HELP) 	vm.def(OPNAME, 1, 1, FUNNAME##_, "(x --> z) " HELP);
 #define DEFNa(FUNNAME, OPNAME, HELP) 	DEFN(FUNNAME, #OPNAME, HELP)
