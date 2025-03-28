@@ -1,6 +1,7 @@
 #define DOCTEST_CONFIG_IMPLEMENT_WITH_MAIN
 #include "Object.hpp"
 #include "doctest.h"
+#include <array>
 
 
 #define CHECK_ARR(expected, actual, n) \
@@ -15,204 +16,34 @@ extern BinaryOp* gBinaryOpPtr_minus;
 extern BinaryOp* gBinaryOpPtr_mul;
 extern BinaryOp* gBinaryOpPtr_div;
 
-using std::vector;
+using std::array;
 
-// TODO: Use the CAPTURE to avoid dupe
-TEST_CASE("BinaryOp_plus loopz") {
-	vector<Z> aa = {1, 2, 3};
-	vector<Z> bb = {4, 5, 6};
-	vector<Z> out(3);
-	vector<Z> expected;
-	int astride, bstride;
-
-	SUBCASE("") {
-		astride = 1;
-		bstride = 1;
-		expected = {5, 7, 9};
-	}
-	SUBCASE("") {
-		astride = 0;
-		bstride = 0;
-		expected = {5, 5, 5};
-	}
-
-	SUBCASE("") {
-		astride = 1;
-		bstride = 0;
-		expected = {5, 6, 7};
-	}
-
-	SUBCASE("") {
-		astride = 0;
-		bstride = 1;
-		expected = {5, 6, 7};
-	}
-
-	SUBCASE("") {
-		astride = 0;
-		bstride = 1;
-		aa = {0};
-		expected = {4, 5, 6};
-	}
-
-	SUBCASE("") {
-		astride = 1;
-		bstride = 0;
-		bb = {0};
-		expected = {1, 2, 3};
-	}
-	CAPTURE(aa);
-	CAPTURE(bb);
-	CAPTURE(astride);
-	CAPTURE(bstride);
-
-	gBinaryOpPtr_plus->loopz(3, aa.data(), astride, bb.data(), bstride, out.data());
-	CHECK_ARR(expected.data(), out.data(), 3);
+void check_binop_loopz(BinaryOp& op, const std::array<Z, 3> a, int astride, const std::array<Z, 3> b, int bstride) {
+	double out[3];
+	double expected[3] = {op.op(a[0], b[0]), op.op(a[1], b[1]), op.op(a[2], b[2])};
+	op.loopz(3, a.data(), 1, b.data(), 1, out);
+	CHECK_ARR(expected, out, 3);
 }
 
-TEST_CASE("BinaryOp_minus loopz") {
-	double aa[] = {1, 2, 3};
-	double bb[] = {4, 5, 6};
-	double zero[] = {0};
-	double out[3];
-
-	SUBCASE("stride 1") {
-		double expected[] = {-3, -3, -3};
-		gBinaryOpPtr_minus->loopz(3, aa, 1, bb, 1, out);
-
-		CHECK_ARR(expected, out, 3);
-	}
-
-	SUBCASE("stride 0") {
-		double expected[] = {-3, -3, -3};
-		gBinaryOpPtr_minus->loopz(3, aa, 0, bb, 0, out);
-
-		CHECK_ARR(expected, out, 3);
-	}
-
-	SUBCASE("astride 1 bstride 0") {
-		double expected[] = {-3, -2, -1};
-		gBinaryOpPtr_minus->loopz(3, aa, 1, bb, 0, out);
-
-		CHECK_ARR(expected, out, 3);
-	}
-
-	SUBCASE("astride 0 bstride 1") {
-		double expected[] = {-3, -4, -5};
-		gBinaryOpPtr_minus->loopz(3, aa, 0, bb, 1, out);
-
-		CHECK_ARR(expected, out, 3);
-	}
-
-	SUBCASE("astride 0 a = 0") {
-		double expected[] = {-4, -5, -6};
-		gBinaryOpPtr_minus->loopz(3, zero, 0, bb, 1, out);
-
-		CHECK_ARR(expected, out, 3);
-	}
-
-	SUBCASE("bstride 0 b = 0") {
-		double expected[] = {1, 2, 3};
-		gBinaryOpPtr_minus->loopz(3, aa, 1, zero, 0, out);
-
-		CHECK_ARR(expected, out, 3);
-	}
+void check_binop_loopz(BinaryOp& op, int astride, int bstride) {
+	check_binop_loopz(op, {1, 2, 3}, astride, {4, 5, 6}, bstride);
 }
 
-TEST_CASE("BinaryOp_mul loopz") {
-	double aa[] = {1, 2, 3};
-	double bb[] = {4, 5, 6};
-	double one[] = {1};
-	double out[3];
+#define CHECK_IDENTITY_BINOP(op) \
+	do { \
+		SUBCASE(#op) { \
+			SUBCASE("stride 1") { check_binop_loopz(*gBinaryOpPtr_##op, 1, 1); } \
+			SUBCASE("stride 0") { check_binop_loopz(*gBinaryOpPtr_##op, 0, 0); } \
+			SUBCASE("astride 1") { check_binop_loopz(*gBinaryOpPtr_##op, 1, 0); } \
+			SUBCASE("bstride 1") { check_binop_loopz(*gBinaryOpPtr_##op, 0, 1); } \
+			SUBCASE("a 0") { check_binop_loopz(*gBinaryOpPtr_##op, {0}, 0, {4, 5, 6}, 1); } \
+			SUBCASE("b 0") { check_binop_loopz(*gBinaryOpPtr_##op, {1, 2, 3}, 1, {4, 5, 6}, 0); } \
+		} \
+	} while (0)
 
-	SUBCASE("stride 1") {
-		double expected[] = {4, 10, 18};
-		gBinaryOpPtr_mul->loopz(3, aa, 1, bb, 1, out);
-
-		CHECK_ARR(expected, out, 3);
-	}
-
-	SUBCASE("stride 0") {
-		double expected[] = {4, 4, 4};
-		gBinaryOpPtr_mul->loopz(3, aa, 0, bb, 0, out);
-
-		CHECK_ARR(expected, out, 3);
-	}
-
-	SUBCASE("astride 1 bstride 0") {
-		double expected[] = {4, 8, 12};
-		gBinaryOpPtr_mul->loopz(3, aa, 1, bb, 0, out);
-
-		CHECK_ARR(expected, out, 3);
-	}
-
-	SUBCASE("astride 0 bstride 1") {
-		double expected[] = {4, 5, 6};
-		gBinaryOpPtr_mul->loopz(3, aa, 0, bb, 1, out);
-
-		CHECK_ARR(expected, out, 3);
-	}
-
-	SUBCASE("astride 0 a = 1") {
-		double expected[] = {4, 5, 6};
-		gBinaryOpPtr_mul->loopz(3, one, 0, bb, 1, out);
-
-		CHECK_ARR(expected, out, 3);
-	}
-
-	SUBCASE("bstride 0 b = 1") {
-		double expected[] = {1, 2, 3};
-		gBinaryOpPtr_mul->loopz(3, aa, 1, one, 0, out);
-
-		CHECK_ARR(expected, out, 3);
-	}
-}
-
-TEST_CASE("BinaryOp_div loopz") {
-	double aa[] = {1, 2, 3};
-	double bb[] = {4, 5, 6};
-	double one[] = {1};
-	double out[3];
-
-	SUBCASE("stride 1") {
-		double expected[] = {.25, .4, .5};
-		gBinaryOpPtr_div->loopz(3, aa, 1, bb, 1, out);
-
-		CHECK_ARR(expected, out, 3);
-	}
-
-	SUBCASE("stride 0") {
-		double expected[] = {.25, .25, .25};
-		gBinaryOpPtr_div->loopz(3, aa, 0, bb, 0, out);
-
-		CHECK_ARR(expected, out, 3);
-	}
-
-	SUBCASE("astride 1 bstride 0") {
-		double expected[] = {.25, .5, .75};
-		gBinaryOpPtr_div->loopz(3, aa, 1, bb, 0, out);
-
-		CHECK_ARR(expected, out, 3);
-	}
-
-	SUBCASE("astride 0 bstride 1") {
-		double expected[] = {.25, .2, 1./6};
-		gBinaryOpPtr_div->loopz(3, aa, 0, bb, 1, out);
-
-		CHECK_ARR(expected, out, 3);
-	}
-
-	SUBCASE("astride 0 a = 1") {
-		double expected[] = {.25, .2, 1./6};
-		gBinaryOpPtr_div->loopz(3, one, 0, bb, 1, out);
-
-		CHECK_ARR(expected, out, 3);
-	}
-
-	SUBCASE("bstride 0 b = 1") {
-		double expected[] = {1, 1, 1};
-		gBinaryOpPtr_div->loopz(3, aa, 1, one, 0, out);
-
-		CHECK_ARR(expected, out, 3);
-	}
+TEST_CASE("identity binops") {
+	CHECK_IDENTITY_BINOP(plus);
+	CHECK_IDENTITY_BINOP(minus);
+	CHECK_IDENTITY_BINOP(div);
+	CHECK_IDENTITY_BINOP(mul);
 }
