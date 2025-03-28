@@ -11,13 +11,13 @@ a Nix flake is included. simply run:
 ```shell
 nix develop
 meson setup build
-meson compile sapf -C build
+meson compile -C build
 ```
 
 and you should get a binary at `./build/sapf`.
 
-It's important to specify `compile sapf`. Previously you could run `meson compile -C build`, but now we have multiple targets and not all of them are buildable on
-a given system - the `sapf` target will build for your native system. You can substitute `sapf` for other targets such as `sapf_x86_64_v3` (check meson.build).
+This will default to building the executable optimized for your native system. 
+You can specify different targets defined in the meson.build file such as `meson compile sapf_x86_64_v3 -C build`.
 
 if not using Nix, you will need to install dependencies manually instead of the `nix develop`. the mandatory dependencies for a portable build are currently:
 
@@ -32,24 +32,22 @@ for installing dependencies, you can refer to the CI scripts in this repo:
 - [install-macos-deps.sh](.github/scripts/install-macos-deps.sh) (macOS with Homebrew)
 
 ## running tests
-Tests are written using doctest (which is obtained via a wrap).
+Tests are written using doctest (which is obtained via a wrap) and located in the `tests` folder.
 See [the doctest documentation](https://github.com/doctest/doctest/tree/master?tab=readme-ov-file#documentation) for more details.
 
-The test are inline with the production code. There is not a separate "test exe" - testing is done simply by building
-the main exe with testing enabled, and running it (you can find the logic for this at the beginning of main()). Passing
-`--exit` ensures it exists after testing. Otherwise, it will run the tests, and then run the main program like normal.
-You can pass other doctest-specific command line arguments and they will be forwarded to doctest.
-
-You can still use meson test to run the tests:
+You can use meson test to run the tests:
 ```shell
 meson test unoptimized --verbose -C build
 ```
-Without `--verbose` you'll need to view the testlog.txt to see the actual test report.
+Without `--verbose` you won't get the doctest test report (not to be confused with meson's
+own, less useful test report) printed to stdout and instead would have to view the test
+log file.
 The `unoptimized` tests the unoptimized version of the exe (which means it should build more quickly).
 Susbtitute with `optimized` to test the optimized (-O3, -march=native) version of the exe.
 
 Note there is currently a feature request for doctest for better integration 
 with meson but it is not yet implemented ATTOW: https://github.com/doctest/doctest/issues/531
+This seems to be why the default meson test report isn't that useful.
 
 ## Windows Usage Caveats
 
