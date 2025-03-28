@@ -14,21 +14,12 @@
 //    You should have received a copy of the GNU General Public License
 //    along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-#ifndef __ZArr_h__
-#define __ZArr_h__
-#ifndef SAPF_ACCELERATE
-#define _USE_MATH_DEFINES
-#include <Eigen/Dense>
-#include "Object.hpp"
+#ifndef __ArrHelpers_h__
+#define __ArrHelpers_h__
 
-#if SAMPLE_IS_DOUBLE
-	typedef Eigen::Map<Eigen::ArrayXd, 0, Eigen::InnerStride<>> ZArr;
-#else
-	typedef Eigen::Map<Eigen::ArrayXf, 0, Eigen::InnerStride<>> ZArr;
-#endif
+#define CHECK_ARR(expected, actual, n) \
+	do { \
+		LOOP(i,n) { CHECK(out[i] == doctest::Approx(expected[i]).epsilon(1e-9)); } \
+	} while (0)
 
-// create an Eigen Map over an existing array, without copying
-ZArr zarr(const Z *vec, int n, int stride);
-
-#endif
 #endif

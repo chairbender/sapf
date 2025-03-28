@@ -22,6 +22,7 @@
 #include <Accelerate/Accelerate.h>
 #else
 #include <Eigen/Dense>
+#include "ZArr.hpp"
 #endif
 
 V BinaryOp::makeVList(Thread& th, Arg a, Arg b)

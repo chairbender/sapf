@@ -191,13 +191,17 @@ executable(
 
 # tests
 test_deps = deps + dependency('doctest', required: true)
-test_sources = sources + 'test/test_MathOps.cpp'
+test_sources = sources + [
+  'test/test_OscilUgens.cpp',
+  'test/test_MathOps.cpp'
+]
+test_includes = [include_directories('include'), include_directories('test/helpers')]
 
 # exe with testing enabled without optimizations
 testable_exe_native_unoptimized = executable(
   'test_unoptimized',
   test_sources,
-  include_directories: [include_directories('include')],
+  include_directories: test_includes,
   dependencies: test_deps,
   cpp_args : cpp_args,
   link_args : link_args,
@@ -208,7 +212,7 @@ testable_exe_native_unoptimized = executable(
 testable_exe_native_optimized = executable(
   'test_optimized',
   test_sources,
-  include_directories: [include_directories('include')],
+  include_directories: test_includes,
   dependencies: test_deps,
   cpp_args : cpp_args + ['-O3', '-march=native'],
   link_args : link_args,
