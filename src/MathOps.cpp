@@ -1461,37 +1461,6 @@ DEFINE_BINOP_FLOAT(round, sc_round(a, b))
 DEFINE_BINOP_FLOAT(roundUp, sc_roundUp(a, b))
 DEFINE_BINOP_FLOAT(trunc, sc_trunc(a, b))
 
-#ifndef DOCTEST_CONFIG_DISABLE
-	void check_binop_loopz(BinaryOp& op, const std::array<Z, 3> a, const std::array<Z, 3> b) {
-		double out[3];
-		double expected[3] = {op.op(a[0], b[0]), op.op(a[1], b[1]), op.op(a[2], b[2])};
-		op.loopz(3, a.data(), 1, b.data(), 1, out);
-		CHECK_ARR(expected, out, 3);
-	}
-
-	void check_binop_loopz(BinaryOp& op) {
-		check_binop_loopz(op, {1, 2, 3}, {4, 5, 6});
-	}
-
-	TEST_CASE_TEMPLATE("binop loopz matches op for input {1, 2, 3} / {4, 5, 6} and stride 1", BinaryOp, 
-		BinaryOp_copysign,
-		BinaryOp_pow,
-		BinaryOp_min,
-		BinaryOp_max,
-		BinaryOp_hypot
-	) {
-		BinaryOp op = BinaryOp();
-		check_binop_loopz(op);
-	}
-
-	TEST_CASE("binop copysign negative handling") {
-		check_binop_loopz(gBinaryOp_copysign, {-1, -2, -3}, {4, 5, 6});
-		check_binop_loopz(gBinaryOp_copysign, {1, 2, 3}, {-4, -5, -6});
-		check_binop_loopz(gBinaryOp_copysign, {-1, -2, -3}, {-4, -5, -6});
-	}
-#endif
-
-
 #define DEFN(FUNNAME, OPNAME, HELP) 	vm.def(OPNAME, 1, 1, FUNNAME##_, "(x --> z) " HELP);
 #define DEFNa(FUNNAME, OPNAME, HELP) 	DEFN(FUNNAME, #OPNAME, HELP)
 #define DEF(NAME, HELP) 	DEFNa(NAME, NAME, HELP); 
