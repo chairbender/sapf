@@ -36,6 +36,7 @@ sources = [
   'src/Types.cpp',
   'src/UGen.cpp',
   'src/VM.cpp',
+  'src/ZArr.cpp',
 ]
 deps = []
 cpp_args = ['-std=c++17']
@@ -189,16 +190,23 @@ executable(
 
 # tests
 test_deps = deps + dependency('doctest', required: true)
-test_sources = sources + 'test/test_MathOps.cpp'
+test_sources = sources + [
+  'test/doctest.cpp',
+  'test/test_OscilUgens.cpp',
+  'test/test_StreamOps.cpp',
+  'test/test_MathOps.cpp'
+]
+test_includes = [include_directories('include'), include_directories('test/helpers')]
+test_cpp_args = cpp_args + '-DTEST_BUILD'
 
 # Just like the main executable, this respects the buildtype param. The target architecture is
 # omitted if it's a debug build, ensuring the best debugging experience
 test_sapf = executable(
   'test_sapf',
   test_sources,
-  include_directories: [include_directories('include')],
+  include_directories: test_includes,
   dependencies: test_deps,
-  cpp_args :  cpp_args + (get_option('buildtype').startswith('debug') ? [] : ['-march=native']),
+  cpp_args :  test_cpp_args + (get_option('buildtype').startswith('debug') ? [] : ['-march=native']),
   link_args : link_args,
   build_by_default: false
 )

@@ -2,7 +2,8 @@ name: Compile
 
 on:
   push:
-    branches: [ "main" ]
+    # TODO: remove
+    branches: [ "main", "simd-others" ]
   pull_request:
     branches: [ "main" ]
     
