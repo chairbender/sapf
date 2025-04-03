@@ -89,23 +89,31 @@ TEST_CASE("blackman simd") {
 	CHECK_ARR(expected, out, n);
 }
 
-inline void wseg_apply_window(Z* segbuf, ZArr window, int n);
+#ifdef SAPF_ACCELERATE
+	inline void wseg_apply_window(Z* segbuf, Z* window, int n);
+#else
+	inline void wseg_apply_window(Z* segbuf, ZArr window, int n);
+#endif
 
 void calc_winseg_apply_window(Z* segbuf, Z* window, int n) {
-  LOOP(i,n) { segbuf[i] = segbuf[i] * window[i]; }
+	LOOP(i,n) { segbuf[i] = segbuf[i] * window[i]; }
 }
 
 TEST_CASE("WinSegment apply window simd") {
-  const int n = 100;
-  Z blackman[n];
-  blackman_calc(blackman, n);
-  Z segbuf_expected[n];
-  Z segbuf_actual[n];
-  LOOP(i, n) { segbuf_expected[i] = sin(i/n); }
-  LOOP(i, n) { segbuf_actual[i] = sin(i/n); }
+	const int n = 100;
+	Z blackman[n];
+	blackman_calc(blackman, n);
+	Z segbuf_expected[n];
+	Z segbuf_actual[n];
+	LOOP(i, n) { segbuf_expected[i] = sin(i / n); }
+	LOOP(i, n) { segbuf_actual[i] = sin(i / n); }
 
-  calc_winseg_apply_window(segbuf_expected, blackman, n);
-  wseg_apply_window(segbuf_actual, zarr(blackman, 1, n), n);
+	calc_winseg_apply_window(segbuf_expected, blackman, n);
+	#ifdef SAPF_ACCELERATE
+		wseg_apply_window(segbuf_actual, blackman, n);
+	#else
+		wseg_apply_window(segbuf_actual, zarr(blackman, 1, n), n);
+	#endif
 
   CHECK_ARR(segbuf_expected, segbuf_actual, n);
 }
