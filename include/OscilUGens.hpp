@@ -21,4 +21,42 @@
 
 void AddOscilUGenOps();
 
+// this ensures that the below symbols are not exposed except for in test builds, and that they
+// aren't removed via optimization in test builds.
+#ifdef TEST_BUILD
+    #include "UGen.hpp"
+    #include "ZArr.hpp"
+    struct SinOsc : OneInputUGen<SinOsc>
+    {
+        Z phase;
+        Z freqmul;
+
+        SinOsc(Thread& th, Arg freq, Z iphase);
+        virtual const char* TypeName() const override;
+        void calc(int n, Z* out, Z* freq, int freqStride);
+    };
+
+
+    struct SinOscPM : TwoInputUGen<SinOscPM>
+    {
+        Z phase;
+        Z freqmul;
+
+        SinOscPM(Thread& th, Arg freq, Arg phasemod);
+        virtual const char* TypeName() const override;
+        void calc(int n, Z* out, Z* freq, Z* phasemod, int freqStride, int phasemodStride);
+    };
+
+    void fillWaveTable(int n, Z* amps, int ampStride, Z* phases, int phaseStride, Z smooth, Z* table);
+
+    void hanning_(Thread& th, Prim* prim);
+    void hamming_(Thread& th, Prim* prim);
+    void blackman_(Thread& th, Prim* prim);
+    #ifdef SAPF_ACCELERATE
+        inline void wseg_apply_window(Z* segbuf, Z* window, int n);
+    #else
+        inline void wseg_apply_window(Z* segbuf, ZArr window, int n);
+    #endif
+#endif
+
 #endif /* defined(__taggeddoubles__OscilUGens__) */

@@ -1154,36 +1154,42 @@ static void impulse_(Thread& th, Prim* prim)
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-struct SinOsc : public OneInputUGen<SinOsc>
-{
-	Z phase;
-	Z freqmul;
-	
-	SinOsc(Thread& th, Arg freq, Z iphase) : OneInputUGen<SinOsc>(th, freq),
-		phase(sc_wrap(iphase, 0., 1.) * kTwoPi), freqmul(th.rate.radiansPerSample)
+#ifndef TEST_BUILD
+	struct SinOsc : OneInputUGen<SinOsc>
 	{
-	}
-	
-	virtual const char* TypeName() const override { return "SinOsc"; }
-		
-	void calc(int n, Z* out, Z* freq, int freqStride) 
-	{
+		Z phase;
+		Z freqmul;
 
-		for (int i = 0; i < n; ++i) {
-			out[i] = phase;
-			phase += *freq * freqmul;
-			freq += freqStride;
-			if (phase >= kTwoPi) phase -= kTwoPi;
-			else if (phase < 0.) phase += kTwoPi;
-		}
-#if SAPF_ACCELERATE
-		vvsin(out, out, &n);
-#else
-		ZArr A = zarr(out, n, 1);
-		A = A.sin();
+		SinOsc(Thread& th, Arg freq, Z iphase);
+		virtual const char* TypeName() const override;
+		void calc(int n, Z* out, Z* freq, int freqStride);
+	};
 #endif
+
+SinOsc::SinOsc(Thread &th, Arg freq, Z iphase) : OneInputUGen<SinOsc>(th, freq),
+		phase(sc_wrap(iphase, 0., 1.) * kTwoPi), freqmul(th.rate.radiansPerSample)
+{
+}
+
+const char * SinOsc::TypeName() const { return "SinOsc"; }
+
+void SinOsc::calc(int n, Z *out, Z *freq, int freqStride)
+{
+
+	for (int i = 0; i < n; ++i) {
+		out[i] = phase;
+		phase += *freq * freqmul;
+		freq += freqStride;
+		if (phase >= kTwoPi) phase -= kTwoPi;
+		else if (phase < 0.) phase += kTwoPi;
 	}
-};
+#if SAPF_ACCELERATE
+	vvsin(out, out, &n);
+#else
+	ZArr A = zarr(out, n, 1);
+	A = A.sin();
+#endif
+}
 
 struct SinOsc2 : public OneInputUGen<SinOsc2>
 {
@@ -1269,6 +1275,7 @@ struct FSinOsc : public ZeroInputUGen<FSinOsc>
 
 
 
+
 struct SinOscPMFB : public TwoInputUGen<SinOscPMFB>
 {
 	Z phase;
@@ -1298,36 +1305,42 @@ struct SinOscPMFB : public TwoInputUGen<SinOscPMFB>
 };
 
 
-struct SinOscPM : public TwoInputUGen<SinOscPM>
+#ifndef TEST_BUILD
+struct SinOscPM : TwoInputUGen<SinOscPM>
 {
 	Z phase;
 	Z freqmul;
-	
-	SinOscPM(Thread& th, Arg freq, Arg phasemod) : TwoInputUGen<SinOscPM>(th, freq, phasemod), phase(0.), freqmul(th.rate.radiansPerSample)
-	{
-		freqmul = th.rate.radiansPerSample;
-	}
-	
-	virtual const char* TypeName() const override { return "SinOscPM"; }
-		
-	void calc(int n, Z* out, Z* freq, Z* phasemod, int freqStride, int phasemodStride) 
-	{
-            for (int i = 0; i < n; ++i) {
-                out[i] = phase + *phasemod * kTwoPi;
-                phase += *freq * freqmul;
-                freq += freqStride;
-                phasemod += phasemodStride;
-                if (phase >= kTwoPi) phase -= kTwoPi;
-                else if (phase < 0.) phase += kTwoPi;
-            }
-#if SAPF_ACCELERATE
-			vvsin(out, out, &n);
-#else
-			ZArr A = zarr(out, n, 1);
-			A = A.sin();
-#endif
-	}
+
+	SinOscPM(Thread& th, Arg freq, Arg phasemod);
+	virtual const char* TypeName() const override;
+	void calc(int n, Z* out, Z* freq, Z* phasemod, int freqStride, int phasemodStride);
 };
+#endif
+
+SinOscPM::SinOscPM(Thread& th, Arg freq, Arg phasemod) : TwoInputUGen<SinOscPM>(th, freq, phasemod), phase(0.), freqmul(th.rate.radiansPerSample)
+{
+	freqmul = th.rate.radiansPerSample;
+}
+
+const char * SinOscPM::TypeName() const { return "SinOscPM"; }
+
+void SinOscPM::calc(int n, Z *out, Z *freq, Z *phasemod, int freqStride, int phasemodStride)
+{
+	for (int i = 0; i < n; ++i) {
+		out[i] = phase + *phasemod * kTwoPi;
+		phase += *freq * freqmul;
+		freq += freqStride;
+		phasemod += phasemodStride;
+		if (phase >= kTwoPi) phase -= kTwoPi;
+		else if (phase < 0.) phase += kTwoPi;
+	}
+#if SAPF_ACCELERATE
+	vvsin(out, out, &n);
+#else
+	ZArr A = zarr(out, n, 1);
+	A = A.sin();
+#endif
+}
 
 struct SinOscM : public ThreeInputUGen<SinOscM>
 {

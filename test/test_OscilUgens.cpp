@@ -16,7 +16,7 @@
 
 #include "dsp.hpp"
 #include "Object.hpp"
-#include "UGen.hpp"
+#include "OscilUGens.hpp"
 #include "VM.hpp"
 #include "doctest.h"
 #include "ArrHelpers.hpp"
@@ -32,16 +32,6 @@ void sinosc_calc(Z phase, Z freqmul, int n, Z* out, Z* freq, int freqStride) {
 	}
 	LOOP(i,n) { out[i] = sin(out[i]); }
 }
-
-struct SinOsc : OneInputUGen<SinOsc>
-{
-	Z phase;
-	Z freqmul;
-
-	SinOsc(Thread& th, Arg freq, Z iphase);
-	virtual const char* TypeName() const;
-	void calc(int n, Z* out, Z* freq, int freqStride);
-};
 
 TEST_CASE("SinOsc SIMD") {
 	const int n = 100;
@@ -100,16 +90,6 @@ void sinoscpm_calc(Z freqmul, int n, Z* out, Z* freq, Z* phasemod, int freqStrid
 	LOOP(i,n) { out[i] = sin(out[i]); }
 }
 
-struct SinOscPM : TwoInputUGen<SinOscPM>
-{
-	Z phase;
-	Z freqmul;
-
-	SinOscPM(Thread& th, Arg freq, Arg phasemod);
-	virtual const char* TypeName() const override;
-	void calc(int n, Z* out, Z* freq, Z* phasemod, int freqStride, int phasemodStride);
-};
-
 TEST_CASE("SinOscPM SIMD") {
 	const int n = 100;
 	Z out[n];
@@ -145,7 +125,7 @@ static void zeroTable(size_t n, Z* table)
 {
 	memset(table, 0, n * sizeof(Z));
 }
-void fillWaveTable(int n, Z* amps, int ampStride, Z* phases, int phaseStride, Z smooth, Z* table);
+
 const int kWaveTableSize = 16384;
 const size_t kWaveTableSize2 = kWaveTableSize / 2;
 void fillwavetable_calc(int n, Z* amps, int ampStride, Z* phases, int phaseStride, Z smooth, Z* table) {

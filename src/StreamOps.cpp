@@ -5930,14 +5930,21 @@ static void seg_(Thread& th, Prim* prim)
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-
 // separated out for better testability of simd implementation
 #ifdef SAPF_ACCELERATE
-    inline void wseg_apply_window(Z* segbuf, Z* window, int n) {
+	#ifdef TEST_BUILD
+	    void wseg_apply_window(Z* segbuf, Z* window, int n) {
+	#else
+	    inline void wseg_apply_window(Z* segbuf, Z* window, int n) {
+	#endif
         vDSP_vmulD(segbuf, 1, window, 1, segbuf, 1, n);
     }
 #else
-    inline void wseg_apply_window(Z* segbuf, ZArr window, int n) {
+	#ifdef TEST_BUILD
+	    void wseg_apply_window(Z* segbuf, ZArr window, int n) {
+	#else
+	    inline void wseg_apply_window(Z* segbuf, ZArr window, int n) {
+	#endif
         ZArr segbufarr = zarr(segbuf, 1, n);
 		segbufarr = segbufarr * window;
     }

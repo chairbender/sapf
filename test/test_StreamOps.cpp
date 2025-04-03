@@ -16,6 +16,7 @@
 
 #include "Object.hpp"
 #include "VM.hpp"
+#include "OscilUGens.hpp"
 #include "doctest.h"
 #include "ArrHelpers.hpp"
 #include "ZArr.hpp"
@@ -26,8 +27,6 @@ void hann_calc(Z* out, int n) {
 		out[i] = 0.5 * (1 - cos(2*M_PI*i/(n-1)));
 	}
 }
-
-void hanning_(Thread& th, Prim* prim);
 
 TEST_CASE("hanning simd") {
 	const int n = 100;
@@ -48,8 +47,6 @@ void hamm_calc(Z* out, int n) {
 		out[i] = 0.54 - .46 * cos(2*M_PI*i/(n-1));
 	}
 }
-
-void hamming_(Thread& th, Prim* prim);
 
 TEST_CASE("hamming simd") {
 	const int n = 100;
@@ -73,8 +70,6 @@ void blackman_calc(Z* out, int n) {
 	}
 }
 
-void blackman_(Thread& th, Prim* prim);
-
 TEST_CASE("blackman simd") {
 	const int n = 100;
 	Z expected[n];
@@ -89,11 +84,7 @@ TEST_CASE("blackman simd") {
 	CHECK_ARR(expected, out, n);
 }
 
-#ifdef SAPF_ACCELERATE
-	inline void wseg_apply_window(Z* segbuf, Z* window, int n);
-#else
-	inline void wseg_apply_window(Z* segbuf, ZArr window, int n);
-#endif
+
 
 void calc_winseg_apply_window(Z* segbuf, Z* window, int n) {
 	LOOP(i,n) { segbuf[i] = segbuf[i] * window[i]; }
@@ -115,5 +106,5 @@ TEST_CASE("WinSegment apply window simd") {
 		wseg_apply_window(segbuf_actual, zarr(blackman, 1, n), n);
 	#endif
 
-  CHECK_ARR(segbuf_expected, segbuf_actual, n);
+	CHECK_ARR(segbuf_expected, segbuf_actual, n);
 }
