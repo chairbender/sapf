@@ -5931,6 +5931,18 @@ static void seg_(Thread& th, Prim* prim)
 ////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 
+// separated out for better testability of simd implementation
+#ifdef SAPF_ACCELERATE
+    inline void wseg_apply_window(Z* segbuf, Z* window, int n) {
+        vDSP_vmulD(segbuf, 1, window, 1, segbuf, 1, n);
+    }
+#else
+    inline void wseg_apply_window(Z* segbuf, ZArr window, int n) {
+        ZArr segbufarr = zarr(segbuf, 1, n);
+		segbufarr = segbufarr * window;
+    }
+#endif
+
 struct WinSegment : public Gen
 {
 	ZIn in_;
@@ -5969,10 +5981,9 @@ struct WinSegment : public Gen
             Z* segbuf = segment->mArray->z();
 			bool nomore = in_.fillSegment(th, (int)length_, segbuf);
 #ifdef SAPF_ACCELERATE
-            vDSP_vmulD(segbuf, 1, window_->z(), 1, segbuf, 1, length_);
+            wseg_apply_window(segbuf, window_->z(), length_);
 #else
-			ZArr segbufarr = zarr(segbuf, 1, length_);
-			segbufarr = segbufarr * windowzarr_;
+            wseg_apply_window(segbuf, windowzarr_, length_);
 #endif // SAPF_ACCELERATE
 			out[i] = segment;
 			++framesFilled;

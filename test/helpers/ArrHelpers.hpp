@@ -19,7 +19,7 @@
 
 #define CHECK_ARR(expected, actual, n) \
 	do { \
-		LOOP(i,n) { CHECK(out[i] == doctest::Approx(expected[i]).epsilon(1e-9)); } \
+		LOOP(i,n) { CHECK(actual[i] == doctest::Approx(expected[i]).epsilon(1e-9)); } \
 	} while (0)
 
 #endif
