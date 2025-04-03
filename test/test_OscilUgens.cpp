@@ -16,7 +16,6 @@
 
 #include "dsp.hpp"
 #include "Object.hpp"
-#include "OscilUGens.hpp"
 #include "VM.hpp"
 #include "doctest.h"
 #include "ArrHelpers.hpp"
