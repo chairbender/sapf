@@ -22,6 +22,7 @@
 #include <Accelerate/Accelerate.h>
 #else
 #include <Eigen/Dense>
+#include "ZArr.hpp"
 #endif
 
 V BinaryOp::makeVList(Thread& th, Arg a, Arg b)
@@ -436,19 +437,6 @@ static void DoIReduce(Thread& th, BinaryOp* op)
 	UnaryOp* gUnaryOpPtr_##NAME = &gUnaryOp_##NAME; \
 	UNARY_OP_PRIM(NAME)
 #else
-#if SAMPLE_IS_DOUBLE
-	typedef Eigen::Map<Eigen::ArrayXd, 0, Eigen::InnerStride<>> ZArr;
-#else
-	typedef Eigen::Map<Eigen::ArrayXf, 0, Eigen::InnerStride<>> ZArr;
-#endif
-
-ZArr zarr(const Z *vec, int n, int stride) {
-	#if SAMPLE_IS_DOUBLE
-		return ZArr((double *)vec, n, Eigen::InnerStride<>(stride));
-	#else
-		return ZArr((float *)vec, n, Eigen::InnerStride<>(stride));
-	#endif
-}
 
 #define ZARR_BINOP(op, n, aa, astride, bb, bstride, out) \
 	do { \

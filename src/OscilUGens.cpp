@@ -29,7 +29,7 @@
 #ifdef SAPF_ACCELERATE
 #include <Accelerate/Accelerate.h>
 #else
-// TODO
+#include "ZArr.hpp"
 #endif
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -91,7 +91,11 @@ static void normalize(int n, Z* buf)
 	}
 }
 
+#ifdef TEST_BUILD
+void fillWaveTable(int n, Z* amps, int ampStride, Z* phases, int phaseStride, Z smooth, Z* table)
+#else
 static void fillWaveTable(int n, Z* amps, int ampStride, Z* phases, int phaseStride, Z smooth, Z* table)
+#endif
 {
 	const size_t kWaveTableSize2 = kWaveTableSize / 2;
 	const Z two_pi = 2. * M_PI;
@@ -125,12 +129,11 @@ static void fillWaveTable(int n, Z* amps, int ampStride, Z* phases, int phaseStr
 	vDSP_rectD(polar, 2, rect, 2, kWaveTableSize2);
 	vDSP_ctozD((DSPDoubleComplex*)rect, 2, &in, 1, kWaveTableSize2);
 #else
-        for(size_t i = 0; i < kWaveTableSize2; i++) {
-		Z radius = real[i];
-		Z angle = imag[i];
-		real[i] = radius * cos(angle);
-		imag[i] = radius * sin(angle);
-	}
+	ZArr real_zarr = zarr(real, kWaveTableSize2, 1);
+	ZArr imag_zarr = zarr(imag, kWaveTableSize2, 1);
+	Eigen::ArrayXd mag = real_zarr;
+	real_zarr = mag * imag_zarr.cos();
+	imag_zarr = mag * imag_zarr.sin();
 #endif // SAPF_ACCELERATE
 	rifft(kWaveTableSize, real, imag, table);
 }
@@ -1151,7 +1154,6 @@ static void impulse_(Thread& th, Prim* prim)
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-
 struct SinOsc : public OneInputUGen<SinOsc>
 {
 	Z phase;
@@ -1166,7 +1168,7 @@ struct SinOsc : public OneInputUGen<SinOsc>
 		
 	void calc(int n, Z* out, Z* freq, int freqStride) 
 	{
-#if SAPF_ACCELERATE
+
 		for (int i = 0; i < n; ++i) {
 			out[i] = phase;
 			phase += *freq * freqmul;
@@ -1174,15 +1176,11 @@ struct SinOsc : public OneInputUGen<SinOsc>
 			if (phase >= kTwoPi) phase -= kTwoPi;
 			else if (phase < 0.) phase += kTwoPi;
 		}
+#if SAPF_ACCELERATE
 		vvsin(out, out, &n);
 #else
-		for (int i = 0; i < n; ++i) {
-			out[i] = sin(phase);
-			phase += *freq * freqmul;
-			freq += freqStride;
-			if (phase >= kTwoPi) phase -= kTwoPi;
-			else if (phase < 0.) phase += kTwoPi;
-		}
+		ZArr A = zarr(out, n, 1);
+		A = A.sin();
 #endif
 	}
 };
@@ -1314,7 +1312,6 @@ struct SinOscPM : public TwoInputUGen<SinOscPM>
 		
 	void calc(int n, Z* out, Z* freq, Z* phasemod, int freqStride, int phasemodStride) 
 	{
-#if SAPF_ACCELERATE
             for (int i = 0; i < n; ++i) {
                 out[i] = phase + *phasemod * kTwoPi;
                 phase += *freq * freqmul;
@@ -1323,16 +1320,11 @@ struct SinOscPM : public TwoInputUGen<SinOscPM>
                 if (phase >= kTwoPi) phase -= kTwoPi;
                 else if (phase < 0.) phase += kTwoPi;
             }
-            vvsin(out, out, &n);
+#if SAPF_ACCELERATE
+			vvsin(out, out, &n);
 #else
-            for (int i = 0; i < n; ++i) {
-                out[i] = sin(phase + *phasemod * kTwoPi);
-                phase += *freq * freqmul;
-                freq += freqStride;
-                phasemod += phasemodStride;
-                if (phase >= kTwoPi) phase -= kTwoPi;
-                else if (phase < 0.) phase += kTwoPi;
-            }
+			ZArr A = zarr(out, n, 1);
+			A = A.sin();
 #endif
 	}
 };
