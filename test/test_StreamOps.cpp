@@ -20,6 +20,7 @@
 #include "doctest.h"
 #include "ArrHelpers.hpp"
 #include "ZArr.hpp"
+#include "Testability.hpp"
 
 // non-vectorized version for comparison
 void hann_calc(Z* out, int n) {

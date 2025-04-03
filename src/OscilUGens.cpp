@@ -26,6 +26,7 @@
 #include <float.h>
 #include <vector>
 #include <algorithm>
+#include "Testability.hpp"
 #ifdef SAPF_ACCELERATE
 #include <Accelerate/Accelerate.h>
 #else
