@@ -37,6 +37,8 @@ sources = [
   'src/UGen.cpp',
   'src/VM.cpp',
   'src/ZArr.cpp',
+  'src/Buffers.cpp',
+  'src/AsyncAudioFileWriter.cpp',
 ]
 deps = []
 cpp_args = ['-std=c++17']
@@ -195,7 +197,8 @@ test_sources = sources + [
   'test/doctest.cpp',
   'test/test_OscilUgens.cpp',
   'test/test_StreamOps.cpp',
-  'test/test_MathOps.cpp'
+  'test/test_MathOps.cpp',
+  'test/test_AsyncAudioFileWriter.cpp',
 ]
 test_includes = [include_directories('include'), include_directories('test/helpers')]
 test_cpp_args = cpp_args + '-DTEST_BUILD'

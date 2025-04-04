@@ -1,3 +1,5 @@
+#pragma once
+
 //    SAPF - Sound As Pure Form
 //    Copyright (C) 2019 James McCartney
 //
@@ -14,17 +16,22 @@
 //    You should have received a copy of the GNU General Public License
 //    along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-#ifndef _Testability_
-#define _Testability_
-
 // this file exposes various internal symbols so they can be unit tested, only
 // for test builds
 #ifdef TEST_BUILD
+#include "UGen.hpp"
+#include "ZArr.hpp"
+#if defined(SAPF_AUDIOTOOLBOX)
+#include <AudioToolbox/AudioToolbox.h>
+#elif defined(SAPF_RTAUDIO_H)
+#include SAPF_RTAUDIO_H
+#else
+#include <RtAudio.h>
+#endif
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////
 // OscilUgens
-#include "UGen.hpp"
-#include "ZArr.hpp"
+
 struct SinOsc : OneInputUGen<SinOsc>
 {
     Z phase;
@@ -60,5 +67,3 @@ void blackman_(Thread& th, Prim* prim);
 #endif
 
 #endif
-#endif
-

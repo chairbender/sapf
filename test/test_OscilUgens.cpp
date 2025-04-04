@@ -131,8 +131,8 @@ const size_t kWaveTableSize2 = kWaveTableSize / 2;
 void fillwavetable_calc(int n, Z* amps, int ampStride, Z* phases, int phaseStride, Z smooth, Z* table) {
 	const Z two_pi = 2. * M_PI;
 
-	Z real[kWaveTableSize2];
-	Z imag[kWaveTableSize2];
+	Z* real = new Z[kWaveTableSize2];
+	Z* imag = new Z[kWaveTableSize2];
 
 	zeroTable(kWaveTableSize2, real);
 	zeroTable(kWaveTableSize2, imag);
@@ -163,8 +163,8 @@ TEST_CASE("fillWaveTable SIMD") {
 	Z phases[n];
 	int phaseStride = 1;
 	Z smooth = 1;
-	Z out[kWaveTableSize];
-	Z expected[kWaveTableSize];
+	Z* out = new Z[kWaveTableSize];
+	Z* expected = new Z[kWaveTableSize];
 	LOOP(i,n) { amps[i] = sin(i/(double)n)/2. + .5; }
 	LOOP(i,n) { phases[i] = cos(i/(double)n); }
 

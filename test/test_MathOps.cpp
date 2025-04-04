@@ -177,7 +177,6 @@ void check_binop_loopz(BinaryOp& op, const array<Z, 3> aarr, int astride, const 
 	double expected[test_n];
 	double a[test_n];
 	double b[test_n];
-	printf("batch size %d", zbatch_size);
 	LOOP(i,test_n) { a[i] = aarr[i % 3]; b[i] = barr[i % 3]; expected[i] = op.op(a[i], b[i]); }
 	op.loopz(3, a, 1, b, 1, out);
 	CHECK_ARR(expected, out, 3);
