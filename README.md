@@ -97,6 +97,7 @@ if the package exists for your architecture.
     mingw-w64-ucrt-x86_64-pkgconf \
     mingw-w64-ucrt-x86_64-rtaudio \
     mingw-w64-ucrt-x86_64-readline \
+    mingw-w64-ucrt-x86_64-xsimd \
     mingw-w64-ucrt-x86_64-ca-certificates
    ```
 4. Close and reopen the shell to ensure it loads everything you just installed. 

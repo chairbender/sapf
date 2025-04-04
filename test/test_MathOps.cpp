@@ -54,6 +54,7 @@ extern UnaryOp* gUnaryOpPtr_log;
 extern UnaryOp* gUnaryOpPtr_log2;
 extern UnaryOp* gUnaryOpPtr_log10;
 extern UnaryOp* gUnaryOpPtr_log1p;
+extern UnaryOp* gUnaryOpPtr_logb;
 extern UnaryOp* gUnaryOpPtr_sin;
 extern UnaryOp* gUnaryOpPtr_cos;
 extern UnaryOp* gUnaryOpPtr_sin1;
@@ -144,6 +145,10 @@ TEST_CASE("unary ops") {
 	CHECK_UNOP_NORMALIZED(asin);
 	CHECK_UNOP_NORMALIZED(acos);
 	CHECK_UNOP_NORMALIZED(atanh);
+
+	SUBCASE("logb") {
+		check_unop_loopz(*gUnaryOpPtr_logb, {1029, 2046, 1023});
+	}
 }
 
 extern BinaryOp* gBinaryOpPtr_plus;

@@ -20,12 +20,17 @@
 #define _USE_MATH_DEFINES
 #include <Eigen/Dense>
 #include "Object.hpp"
+#include <xsimd/xsimd.hpp>
 
 #if SAMPLE_IS_DOUBLE
 	typedef Eigen::Map<Eigen::ArrayXd, 0, Eigen::InnerStride<>> ZArr;
+	typedef xsimd::batch<double> ZBatch;
 #else
 	typedef Eigen::Map<Eigen::ArrayXf, 0, Eigen::InnerStride<>> ZArr;
+	typedef xsimd::batch<float> ZBatch;
 #endif
+
+constexpr size_t zbatch_size = ZBatch::size;
 
 // create an Eigen Map over an existing array, without copying
 ZArr zarr(const Z *vec, int n, int stride);

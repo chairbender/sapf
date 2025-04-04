@@ -468,6 +468,33 @@ static void DoIReduce(Thread& th, BinaryOp* op)
 	UnaryOp_##NAME gUnaryOp_##NAME; \
 	UnaryOp* gUnaryOpPtr_##NAME = &gUnaryOp_##NAME; \
 	UNARY_OP_PRIM(NAME)
+
+// OP should be some code which takes ZBatch A and produces ZBatch R
+#define DEFINE_UNOP_FLOATVV_XSIMD(NAME, CODE, OP) \
+	struct UnaryOp_##NAME : public UnaryOp { \
+		virtual const char *Name() { return #NAME; } \
+		virtual double op(double a) { return CODE; } \
+		virtual void loopz(int n, const Z *aa, int astride, Z *out) { \
+			if (astride == 1) { \
+				size_t vec_size = n - n % zbatch_size; \
+				for (size_t i = 0; i < vec_size; i += zbatch_size) { \
+					ZBatch A = ZBatch::load_aligned(&aa[i]); \
+					OP \
+					R.store_aligned(&out[i]); \
+				} \
+				for(size_t i = vec_size; i < n; ++i) { \
+					Z a = aa[i]; \
+					out[i] = CODE; \
+				} \
+			} else { \
+				LOOP(i,n) { Z a = *aa; out[i] = CODE; aa += astride; } \
+			} \
+		} \
+	}; \
+	UnaryOp_##NAME gUnaryOp_##NAME; \
+	UnaryOp* gUnaryOpPtr_##NAME = &gUnaryOp_##NAME; \
+	UNARY_OP_PRIM(NAME)
+
 #endif // SAPF_ACCELERATE
 
 
@@ -870,11 +897,19 @@ DEFINE_UNOP_FLOAT(pow9, sc_ninth(a))
 #endif
 DEFINE_UNOP_FLOAT(exp10, pow(10., a))
 
-// TODO: Not vectorized in Eigen - possibly use XSIMD?
 #ifdef SAPF_ACCELERATE
 	DEFINE_UNOP_FLOATVV(logb, logb(a), vvlogb)
 #else
-	DEFINE_UNOP_FLOAT(logb, logb(a))
+	// Extract IEEE 754 exponent bits, then unbias by subtracting
+	#if SAMPLE_IS_DOUBLE
+		DEFINE_UNOP_FLOATVV_XSIMD(logb, logb(a),
+		auto bits = xsimd::bitwise_cast<std::int64_t>(A);
+		auto R = xsimd::to_float((bits >> 52) & 0x7FF) - 1023.0;)
+	#else
+		DEFINE_UNOP_FLOATVV_XSIMD(logb, logb(a),
+		auto bits = xsimd::bitwise_cast<std::int32_t>(A);
+		auto R = xsimd::to_float((bits >> 23) & 0xFF) - 127.0f;)
+	#endif
 #endif
 
 DEFINE_UNOP_FLOAT(sinc, sc_sinc(a))

@@ -62,6 +62,7 @@ if get_option('accelerate')
 else
   deps += dependency('fftw3', required: true, version: '>=3')
   deps += dependency('eigen3', required: true)
+  deps += dependency('xsimd', required: true)
 endif
 
 if get_option('apple_lock')
