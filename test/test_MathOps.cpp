@@ -162,6 +162,7 @@ extern BinaryOp* gBinaryOpPtr_div;
 extern BinaryOp* gBinaryOpPtr_copysign;
 extern BinaryOp* gBinaryOpPtr_nextafter;
 extern BinaryOp* gBinaryOpPtr_pow;
+extern BinaryOp* gBinaryOpPtr_atan2;
 extern BinaryOp* gBinaryOpPtr_min;
 extern BinaryOp* gBinaryOpPtr_max;
 extern BinaryOp* gBinaryOpPtr_hypot;
@@ -209,11 +210,46 @@ TEST_CASE("other binops") {
 	CHECK_BINOP(min);
 	CHECK_BINOP(max);
 	CHECK_BINOP(hypot);
-	CHECK_BINOP(nextafter);
 }
 
 TEST_CASE("binop copysign negative handling") {
 	check_binop_loopz(*gBinaryOpPtr_copysign, {-1, -2, -3}, 1, {4, 5, 6}, 1);
 	check_binop_loopz(*gBinaryOpPtr_copysign, {1, 2, 3}, 1, {-4, -5, -6}, 1);
 	check_binop_loopz(*gBinaryOpPtr_copysign, {-1, -2, -3}, 1, {-4, -5, -6}, 1);
+}
+
+TEST_CASE("nextafter") {
+	SUBCASE("different") {
+		check_binop_loopz(*gBinaryOpPtr_nextafter, {1, 2, 3}, 1, {4, 5, 6}, 1);
+	}
+	SUBCASE("swap") {
+		check_binop_loopz(*gBinaryOpPtr_nextafter, {4, 5, 6}, 1, {7, 8, 9}, 1);
+	}
+	SUBCASE("eq") {
+		check_binop_loopz(*gBinaryOpPtr_nextafter, {1, 2, 3}, 1, {1, 2, 3}, 1);
+	}
+	SUBCASE("neg / poz") {
+		check_binop_loopz(*gBinaryOpPtr_nextafter, {-1, -2, -3}, 1, {4, 5, 6}, 1);
+	}
+	SUBCASE("poz / neg") {
+		check_binop_loopz(*gBinaryOpPtr_nextafter, {1, 2, 3}, 1, {-4, -5, -6}, 1);
+	}
+}
+
+TEST_CASE("atan2") {
+	SUBCASE("normal") {
+		check_binop_loopz(*gBinaryOpPtr_atan2, {1, 2, 3}, 1, {4, 5, 6}, 0);
+	}
+	SUBCASE("swap") {
+		check_binop_loopz(*gBinaryOpPtr_atan2, {4, 5, 6}, 1, {1, 2, 3}, 0);
+	}
+	SUBCASE("eq") {
+		check_binop_loopz(*gBinaryOpPtr_atan2, {1, 2, 3}, 1, {1, 2, 3}, 0);
+	}
+	SUBCASE("neg / poz") {
+		check_binop_loopz(*gBinaryOpPtr_atan2, {-1, -2, -3}, 1, {4, 5, 6}, 0);
+	}
+	SUBCASE("poz / neg") {
+		check_binop_loopz(*gBinaryOpPtr_atan2, {1, 2, 3}, 1, {-4, -5, -6}, 0);
+	}
 }

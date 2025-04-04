@@ -1500,8 +1500,9 @@ DEFINE_BINOP_INT(imod, sc_imod(a, b))
 	DEFINE_BINOP_FLOATVV1(atan2, atan2(a, b), vvatan2(out, aa, bb, &n))
 #else
 	DEFINE_BINOP_FLOATVV(pow, sc_pow(a, b), pow(A, B))
-	// TODO: Not supported in Eigen until next release (whatever is after 3.4.0). Could use XSIMD if desired.
-	DEFINE_BINOP_FLOAT(atan2, atan2(a, b))
+	DEFINE_BINOP_FLOATVV_XSIMD(atan2, atan2(a, b),
+		auto R = xsimd::atan2(A, B);
+	)
 #endif
 
 
