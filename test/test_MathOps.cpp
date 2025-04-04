@@ -17,6 +17,7 @@
 #include "Object.hpp"
 #include "doctest.h"
 #include <array>
+#include <ZArr.hpp>
 
 using std::array;
 
@@ -25,11 +26,15 @@ using std::array;
 		LOOP(i,n) { CHECK(out[i] == doctest::Approx(expected[i]).epsilon(1e-9)); } \
 	} while (0)
 
-void check_unop_loopz(UnaryOp& op, const array<Z, 3> in) {
-	double out[3];
-	double expected[3] = {op.op(in[0]), op.op(in[1]), op.op(in[2])};
-	op.loopz(3, in.data(), 1, out);
-	CHECK_ARR(expected, out, 3);
+// ensure it's long enough to exceed the max possible vector batch size (16 with an AVX512 int32)
+const int test_n = 18;
+void check_unop_loopz(UnaryOp& op, const array<Z, 3> inarr) {
+	double out[test_n];
+	double expected[test_n];
+	double in[test_n];
+	LOOP(i,test_n) { in[i] = inarr[i % 3]; expected[i] = op.op(in[i]); }
+	op.loopz(test_n, in, 1, out);
+	CHECK_ARR(expected, out, test_n);
 }
 
 void check_unop_loopz(UnaryOp& op) {
@@ -167,10 +172,14 @@ extern BinaryOp* gBinaryOpPtr_min;
 extern BinaryOp* gBinaryOpPtr_max;
 extern BinaryOp* gBinaryOpPtr_hypot;
 
-void check_binop_loopz(BinaryOp& op, const array<Z, 3> a, int astride, const array<Z, 3> b, int bstride) {
-	double out[3];
-	double expected[3] = {op.op(a[0], b[0]), op.op(a[1], b[1]), op.op(a[2], b[2])};
-	op.loopz(3, a.data(), 1, b.data(), 1, out);
+void check_binop_loopz(BinaryOp& op, const array<Z, 3> aarr, int astride, const array<Z, 3> barr, int bstride) {
+	double out[test_n];
+	double expected[test_n];
+	double a[test_n];
+	double b[test_n];
+	printf("batch size %d", zbatch_size);
+	LOOP(i,test_n) { a[i] = aarr[i % 3]; b[i] = barr[i % 3]; expected[i] = op.op(a[i], b[i]); }
+	op.loopz(3, a, 1, b, 1, out);
 	CHECK_ARR(expected, out, 3);
 }
 
