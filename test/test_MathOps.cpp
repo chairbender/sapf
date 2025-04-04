@@ -149,6 +149,10 @@ TEST_CASE("unary ops") {
 	SUBCASE("logb") {
 		check_unop_loopz(*gUnaryOpPtr_logb, {1029, 2046, 1023});
 	}
+
+	SUBCASE("nextafter") {
+		check_unop_loopz(*gUnaryOpPtr_logb, {1029, 2046, 1023});
+	}
 }
 
 extern BinaryOp* gBinaryOpPtr_plus;
@@ -156,6 +160,7 @@ extern BinaryOp* gBinaryOpPtr_minus;
 extern BinaryOp* gBinaryOpPtr_mul;
 extern BinaryOp* gBinaryOpPtr_div;
 extern BinaryOp* gBinaryOpPtr_copysign;
+extern BinaryOp* gBinaryOpPtr_nextafter;
 extern BinaryOp* gBinaryOpPtr_pow;
 extern BinaryOp* gBinaryOpPtr_min;
 extern BinaryOp* gBinaryOpPtr_max;
@@ -204,6 +209,7 @@ TEST_CASE("other binops") {
 	CHECK_BINOP(min);
 	CHECK_BINOP(max);
 	CHECK_BINOP(hypot);
+	CHECK_BINOP(nextafter);
 }
 
 TEST_CASE("binop copysign negative handling") {

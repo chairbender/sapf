@@ -699,6 +699,51 @@ static void DoIReduce(Thread& th, BinaryOp* op)
 	BinaryOp_##NAME gBinaryOp_##NAME; \
 	BinaryOp* gBinaryOpPtr_##NAME = &gBinaryOp_##NAME; \
 	BINARY_OP_PRIM(NAME)
+
+// op should take a ZBatch A and ZBatch B and
+// populate a ZBatch R with the result.
+#define DEFINE_BINOP_FLOATVV_XSIMD(NAME, CODE, OP) \
+	struct BinaryOp_##NAME : public BinaryOp { \
+		virtual const char *Name() { return #NAME; } \
+		virtual double op(double a, double b) { return CODE; } \
+		virtual void loopz(int n, const Z *aa, int astride, const Z *bb, int bstride, Z *out) { \
+			if (astride == 1 && bstride == 1) { \
+				size_t vec_size = n - n % zbatch_size; \
+				for (size_t i = 0; i < vec_size; i += zbatch_size) { \
+					ZBatch A = ZBatch::load_aligned(&aa[i]); \
+					ZBatch B = ZBatch::load_aligned(&bb[i]); \
+					OP \
+					R.store_aligned(&out[i]); \
+				} \
+				for(size_t i = vec_size; i < n; ++i) { \
+					Z a = aa[i]; \
+					Z b = bb[i]; \
+					out[i] = CODE; \
+				} \
+			} else { \
+				LOOP(i,n) { Z a = *aa; Z b = *bb; out[i] = CODE; aa += astride; bb += bstride; } \
+			} \
+		} \
+		virtual void pairsz(int n, Z& z, Z *aa, int astride, Z *out) { \
+			Z b = z; \
+			LOOP(i,n) { Z a = *aa; out[i] = CODE; b = a; aa += astride; } \
+			z = b; \
+		} \
+		virtual void scanz(int n, Z& z, Z *aa, int astride, Z *out) { \
+			Z a = z; \
+			LOOP(i,n) { Z b = *aa; out[i] = a = CODE; aa += astride; } \
+			z = a; \
+		} \
+		virtual void reducez(int n, Z& z, Z *aa, int astride) { \
+			Z a = z; \
+			LOOP(i,n) { Z b = *aa; a = CODE; aa += astride; } \
+			z = a; \
+		} \
+	}; \
+	BinaryOp_##NAME gBinaryOp_##NAME; \
+	BinaryOp* gBinaryOpPtr_##NAME = &gBinaryOp_##NAME; \
+	BINARY_OP_PRIM(NAME)
+
 	
 #endif // SAPF_ACCELERATE
 
@@ -903,12 +948,14 @@ DEFINE_UNOP_FLOAT(exp10, pow(10., a))
 	// Extract IEEE 754 exponent bits, then unbias by subtracting
 	#if SAMPLE_IS_DOUBLE
 		DEFINE_UNOP_FLOATVV_XSIMD(logb, logb(a),
-		auto bits = xsimd::bitwise_cast<std::int64_t>(A);
-		auto R = xsimd::to_float((bits >> 52) & 0x7FF) - 1023.0;)
+			auto bits = xsimd::bitwise_cast<Z_INT_EQUIV>(A);
+			auto R = xsimd::to_float((bits >> 52) & 0x7FF) - 1023.0;
+		)
 	#else
 		DEFINE_UNOP_FLOATVV_XSIMD(logb, logb(a),
-		auto bits = xsimd::bitwise_cast<std::int32_t>(A);
-		auto R = xsimd::to_float((bits >> 23) & 0xFF) - 127.0f;)
+			auto bits = xsimd::bitwise_cast<Z_INT_EQUIV>(A);
+			auto R = xsimd::to_float((bits >> 23) & 0xFF) - 127.0f;
+		)
 	#endif
 #endif
 
@@ -1056,9 +1103,42 @@ DEFINE_BINOP_FLOAT_STRING(cmp,  sc_cmp(a, b), sc_sgn(strcmp(a, b)))
 	DEFINE_BINOP_FLOATVV1(copysign, copysign(a, b), vvcopysign(out, const_cast<Z*>(aa), bb, &n)) // bug in vForce.h requires const_cast
 	DEFINE_BINOP_FLOATVV1(nextafter, nextafter(a, b), vvnextafter(out, const_cast<Z*>(aa), bb, &n)) // bug in vForce.h requires const_cast
 #else
-	DEFINE_BINOP_FLOATVV(copysign, copysign(a, b), A.abs() * B.sign()) 
-	// TODO: Not vectorized in Eigen - possibly use XSIMD?
-	DEFINE_BINOP_FLOAT(nextafter, nextafter(a, b))
+	DEFINE_BINOP_FLOATVV(copysign, copysign(a, b), A.abs() * B.sign())
+
+    using int_batch  = xsimd::batch<Z_INT_EQUIV>;
+    using bool_batch = xsimd::batch_bool<Z_INT_EQUIV>;
+
+    const xsimd::batch<Z_INT_EQUIV> sign_mask = xsimd::bitwise_cast<Z_INT_EQUIV>(xsimd::batch<Z>{-0.0});
+    const xsimd::batch<Z_INT_EQUIV> zero_mask{0};
+    const xsimd::batch<Z_INT_EQUIV> one_mask{1};
+    const xsimd::batch<Z_INT_EQUIV> neg_one_mask{-1};
+
+    DEFINE_BINOP_FLOATVV_XSIMD(nextafter, nextafter(a, b),
+        // Handle case where from == to
+        auto equal_mask = (A == B);
+
+        // Bitwise view
+        auto from_bits = xsimd::bitwise_cast<Z_INT_EQUIV>(A);
+        auto to_bits   = xsimd::bitwise_cast<Z_INT_EQUIV>(B);
+
+        // Handle -0.0 correctly: treat it as 0
+        auto is_neg_zero = (from_bits == sign_mask);
+        auto cleaned_from_bits = xsimd::select(is_neg_zero, zero_mask, from_bits);
+
+        // Compare bitwise: from_bits < to_bits
+        bool_batch direction_mask = (cleaned_from_bits < to_bits);
+
+        // Select +1 or -1 based on direction
+        auto increment = xsimd::select(direction_mask, one_mask, neg_one_mask);
+
+        auto adjusted_bits = cleaned_from_bits + increment;
+
+        // Reinterpret as Z
+        auto result = xsimd::bitwise_cast<Z>(adjusted_bits);
+
+        // Use original comparison to handle from == to
+        auto R = xsimd::select(equal_mask, B, result);
+    )
 #endif
 
 // identity optimizations of basic operators.
