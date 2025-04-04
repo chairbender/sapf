@@ -84,8 +84,6 @@ TEST_CASE("blackman simd") {
 	CHECK_ARR(expected, out, n);
 }
 
-
-
 void calc_winseg_apply_window(Z* segbuf, Z* window, int n) {
 	LOOP(i,n) { segbuf[i] = segbuf[i] * window[i]; }
 }

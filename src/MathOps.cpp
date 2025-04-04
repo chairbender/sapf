@@ -470,6 +470,8 @@ static void DoIReduce(Thread& th, BinaryOp* op)
 	UNARY_OP_PRIM(NAME)
 
 // OP should be some code which takes ZBatch A and produces ZBatch R
+// TODO: By switching the relevant vars to use an aligned allocator provided by xsimd,
+//		we could use load/store_aligned and improve performance
 #define DEFINE_UNOP_FLOATVV_XSIMD(NAME, CODE, OP) \
 	struct UnaryOp_##NAME : public UnaryOp { \
 		virtual const char *Name() { return #NAME; } \
@@ -478,9 +480,9 @@ static void DoIReduce(Thread& th, BinaryOp* op)
 			if (astride == 1) { \
 				size_t vec_size = n - n % zbatch_size; \
 				for (size_t i = 0; i < vec_size; i += zbatch_size) { \
-					ZBatch A = ZBatch::load_aligned(&aa[i]); \
+					ZBatch A = ZBatch::load_unaligned(&aa[i]); \
 					OP \
-					R.store_aligned(&out[i]); \
+					R.store_unaligned(&out[i]); \
 				} \
 				for(size_t i = vec_size; i < n; ++i) { \
 					Z a = aa[i]; \
@@ -702,6 +704,8 @@ static void DoIReduce(Thread& th, BinaryOp* op)
 
 // op should take a ZBatch A and ZBatch B and
 // populate a ZBatch R with the result.
+// TODO: By switching the relevant vars to use an aligned allocator provided by xsimd,
+//		we could use load/store_aligned and improve performance
 #define DEFINE_BINOP_FLOATVV_XSIMD(NAME, CODE, OP) \
 	struct BinaryOp_##NAME : public BinaryOp { \
 		virtual const char *Name() { return #NAME; } \
@@ -710,10 +714,10 @@ static void DoIReduce(Thread& th, BinaryOp* op)
 			if (astride == 1 && bstride == 1) { \
 				size_t vec_size = n - n % zbatch_size; \
 				for (size_t i = 0; i < vec_size; i += zbatch_size) { \
-					ZBatch A = ZBatch::load_aligned(&aa[i]); \
-					ZBatch B = ZBatch::load_aligned(&bb[i]); \
+					ZBatch A = ZBatch::load_unaligned(&aa[i]); \
+					ZBatch B = ZBatch::load_unaligned(&bb[i]); \
 					OP \
-					R.store_aligned(&out[i]); \
+					R.store_unaligned(&out[i]); \
 				} \
 				for(size_t i = vec_size; i < n; ++i) { \
 					Z a = aa[i]; \

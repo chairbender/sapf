@@ -157,7 +157,7 @@ void fillwavetable_calc(int n, Z* amps, int ampStride, Z* phases, int phaseStrid
 }
 
 TEST_CASE("fillWaveTable SIMD") {
-	const int n = 5;
+	const int n = 100;
 	Z amps[n];
 	int ampStride = 1;
 	Z phases[n];
