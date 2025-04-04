@@ -3,7 +3,7 @@ name: Compile
 on:
   push:
     # TODO: remove
-    branches: [ "main", "simd-others" ]
+    branches: [ "main", "xsimd-porting" ]
   pull_request:
     branches: [ "main" ]
     
