@@ -244,8 +244,8 @@ unique_ptr<SndfileSoundFile> SndfileSoundFile::create(const char *path, const in
 		fileSampleRate = threadSampleRate;
 
 	SF_INFO sfinfo{
-		.channels = numChannels,
 		.samplerate = static_cast<int>(fileSampleRate),
+		.channels = numChannels,
 		.format = SF_FORMAT_WAV | SF_FORMAT_FLOAT};
 	const auto sndfile{sf_open(path, SFM_WRITE, &sfinfo)};
     if (!sndfile) {

@@ -173,8 +173,8 @@ double find_dominant_frequency(const vector<std::complex<double>>& spectrum, con
 void writeTestSignal(const string &fileName, const int numChannels, const int numInputFrames, const double srcSampleRate,
                      const int bufferSize) {
     SF_INFO sfinfo{
-        .channels = numChannels,
         .samplerate = static_cast<int>(srcSampleRate),
+        .channels = numChannels,
         .format = SF_FORMAT_WAV | SF_FORMAT_DOUBLE
     };
     SNDFILE *outfile = sf_open(fileName.c_str(), SFM_WRITE, &sfinfo);
@@ -217,8 +217,8 @@ pair<unique_ptr<PortableBuffers>, vector<vector<double>>> createPortableBuffers(
 
 SF_INFO createSndfileInfo(const int numChannels, const double sampleRate) {
     return SF_INFO {
-        .channels = numChannels,
         .samplerate = static_cast<int>(sampleRate),
+        .channels = numChannels,
         .format = SF_FORMAT_WAV | SF_FORMAT_DOUBLE};
 }
 
