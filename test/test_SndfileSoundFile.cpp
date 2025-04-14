@@ -217,8 +217,8 @@ pair<unique_ptr<PortableBuffers>, vector<vector<double>>> createPortableBuffers(
 
 SF_INFO createSndfileInfo(const int numChannels, const double sampleRate) {
     return SF_INFO {
-        .channels = numChannels,
         .samplerate = static_cast<int>(sampleRate),
+        .channels = numChannels,
         .format = SF_FORMAT_WAV | SF_FORMAT_DOUBLE};
 }
 
