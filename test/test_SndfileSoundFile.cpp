@@ -391,7 +391,6 @@ TEST_CASE("SndfileSoundFile file reading with resampling") {
         for (int channel = 0; channel < numChannels; channel++) {
             fftw_destroy_plan(fftPlans[channel]);
         }
-        fftw_cleanup();
         CHECK(totalFramesPulled == expectedOutputFrames);
     }
 
