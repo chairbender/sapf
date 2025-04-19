@@ -87,7 +87,8 @@ if get_option('lsan')
 endif
 
 if get_option('accelerate')
-  add_project_arguments('-DSAPF_ACCELERATE', language: 'cpp')
+  add_project_arguments('-DSAPF_ACCELERATE', language: ['cpp', 'objcpp'])
+  link_args += ['-framework', 'Accelerate']
 else
   deps += dependency('fftw3', required: true, version: '>=3')
   deps += dependency('eigen3', required: true)
@@ -95,52 +96,56 @@ else
 endif
 
 if get_option('apple_lock')
-  add_project_arguments('-DSAPF_APPLE_LOCK', language: 'cpp')
+  add_project_arguments('-DSAPF_APPLE_LOCK', language: ['cpp', 'objcpp'])
 endif
 
 if get_option('audiotoolbox')
-  add_project_arguments('-DSAPF_AUDIOTOOLBOX', language: 'cpp')
+  add_project_arguments('-DSAPF_AUDIOTOOLBOX', language: ['cpp', 'objcpp'])
+  link_args += ['-framework', 'AudioToolbox']
 else
   deps += dependency('rtaudio', required: true, version: '>=5.2')
   if not cpp.has_header('RtAudio.h') and cpp.has_header('rtaudio/RtAudio.h')
-    add_project_arguments('-DSAPF_RTAUDIO_H=<rtaudio/RtAudio.h>', language: 'cpp')
+    add_project_arguments('-DSAPF_RTAUDIO_H=<rtaudio/RtAudio.h>', language: ['cpp', 'objcpp'])
   endif
 
   deps += dependency('sndfile', required: true)
 endif
 
 if get_option('carbon')
-  add_project_arguments('-DSAPF_CARBON', language: 'cpp')
+  add_project_arguments('-DSAPF_CARBON', language: ['cpp', 'objcpp'])
+  link_args += ['-framework', 'Carbon']
 endif
 
 if get_option('cocoa')
-  add_project_arguments('-DSAPF_COCOA', language: 'cpp')
-  sources += 'src/makeImage.mm'
+  add_project_arguments('-DSAPF_COCOA', '-std=c++17', language: ['cpp', 'objcpp'])
+  sources += ['src/makeImage.mm']
   add_languages('objcpp', required : true)
+  link_args += ['-framework', 'Cocoa']
 else
   sources += 'src/makeImage.cpp'
 endif
 
 if get_option('corefoundation')
-  add_project_arguments('-DSAPF_COREFOUNDATION', language: 'cpp')
+  add_project_arguments('-DSAPF_COREFOUNDATION', language: ['cpp', 'objcpp'])
+  link_args += ['-framework', 'CoreFoundation']
 endif
 
 if get_option('coremidi')
-  add_project_arguments('-DSAPF_COREMIDI', language: 'cpp')
+  add_project_arguments('-DSAPF_COREMIDI', language: ['cpp', 'objcpp'])
+  link_args += ['-framework', 'CoreMIDI']
 endif
 
 if get_option('dispatch')
   cpp_args += ['-fblocks']
-  link_args += ['-lBlocksRuntime', '-ldispatch']
-  add_project_arguments('-DSAPF_DISPATCH', language: 'cpp')
+  add_project_arguments('-DSAPF_DISPATCH', language: ['cpp', 'objcpp'])
 endif
 
 if get_option('mach_time')
-  add_project_arguments('-DSAPF_MACH_TIME', language: 'cpp')
+  add_project_arguments('-DSAPF_MACH_TIME', language: ['cpp', 'objcpp'])
 endif
 
 if get_option('manta')
-  add_project_arguments('-DSAPF_MANTA', language: 'cpp')
+  add_project_arguments('-DSAPF_MANTA', language: ['cpp', 'objcpp'])
 endif
 
 # has to be declared down here because it needs to come after any calls to

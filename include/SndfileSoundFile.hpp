@@ -7,11 +7,13 @@
 #include <vector>
 #include <sndfile.h>
 #include <CDSPResampler.h>
+#include "AsyncAudioFileWriter.hpp"
 
 class SndfileSoundFile {
 public:
 	// maxBufLen should be the max size (in samples) of the PortableBuffers that will be passed to pull.
-	SndfileSoundFile(SNDFILE *inSndfile, int inNumChannels, double inFileSampleRate, double inThreadSampleRate, int maxBufLen);
+	SndfileSoundFile(std::string path, std::unique_ptr<AsyncAudioFileWriter> writer,
+		SNDFILE *inSndfile, int inNumChannels, double inFileSampleRate, double inThreadSampleRate, int maxBufLen);
 	~SndfileSoundFile();
 
 	uint32_t numChannels() const;
@@ -22,14 +24,22 @@ public:
 	// Note framesRead is updated based on the actual number of frames that were read
 	// (which would be less than requested in the event we reach the end of file for example).
 	int pull(uint32_t *framesRead, PortableBuffers& buffers);
-	// write to file synchronously (blocking)
+	// write to file synchronously (blocking). Only functions if create was called with async=false
 	// bufs is expected to contain only a single buffer with the specified number of channels
 	// and the buffer data already interleaved (for wav output), as floats. It should have
 	// the exact amount of frames as indicated by numFrames.
 	void write(int numFrames, const PortableBuffers& bufs) const;
 
+	// write to file asynchronously (non-blocking). Only functions if create was called with async=true
+	// captures the current data in the buffers and submits it to be written asynchronously.
+	// will be flushed when this object is destructed.
+	void writeAsync(const RtBuffers& buffers, unsigned int nBufferFrames) const;
+
 	static std::unique_ptr<SndfileSoundFile> open(const char *path, double threadSampleRate, int maxBufLen);
-	static std::unique_ptr<SndfileSoundFile> create(const char *path, int numChannels, double threadSampleRate, double fileSampleRate, bool interleaved, int maxBufLen);
+	// async parameter determines whether async writing should be supported (writeAsync) or not (write).
+	// they are mutually exclusive.
+	static std::unique_ptr<SndfileSoundFile> create(const char *path, int numChannels, double threadSampleRate,
+		double fileSampleRate, bool interleaved, int maxBufLen, bool async);
 private:
 	void readUntilResamplerOutput(double *interleaved);
 	void endOfInputFile();
@@ -51,6 +61,13 @@ private:
 	                                                     double threadSampleRate,
 	                                                     int resamplerInputBufLen);
 
+	// file path
+	const std::string mPath;
+
+	// for async output (recording)
+	const std::unique_ptr<AsyncAudioFileWriter> mWriter;
+
+	// for synchronous input / output
 	SNDFILE* const mSndfile;
 	const int mNumChannels;
 	const double mDestToSrcSampleRateRatio;
