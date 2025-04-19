@@ -5807,7 +5807,7 @@ static void hanning_(Thread& th, Prim* prim)
 #else
 	Eigen::ArrayXd arr = Eigen::ArrayXd::LinSpaced(n, 0, n - 1);
 	ZArr outzarr = zarr(out->mArray->z(), n, 1);
-	outzarr = 0.5 * (1.0 - (2.0 * M_PI * arr / (n - 1)).cos());
+	outzarr = 0.5 * (1.0 - (2.0 * M_PI * arr / n).cos());
 #endif // SAPF_ACCELERATE
 	
 	th.push(out);
@@ -5829,7 +5829,7 @@ static void hamming_(Thread& th, Prim* prim)
 #else
 	Eigen::ArrayXd arr = Eigen::ArrayXd::LinSpaced(n, 0, n - 1);
 	ZArr outzarr = zarr(out->mArray->z(), n, 1);
-	outzarr = 0.54 - .46 * (2.0 * M_PI * arr / (n - 1)).cos();
+	outzarr = 0.54 - .46 * (2.0 * M_PI * arr / n).cos();
 #endif // SAPF_ACCELERATE
 	
 	th.push(out);
@@ -5852,8 +5852,8 @@ static void blackman_(Thread& th, Prim* prim)
 	Eigen::ArrayXd arr = Eigen::ArrayXd::LinSpaced(n, 0, n - 1);
 	ZArr outzarr = zarr(out->mArray->z(), n, 1);
 	outzarr = 0.42
-		- .5 * (2.0 * M_PI * arr / (n - 1)).cos()
-		+ .08 * (4.0 * M_PI * arr / (n - 1)).cos();
+		- .5 * (2.0 * M_PI * arr / n).cos()
+		+ .08 * (4.0 * M_PI * arr / n).cos();
 #endif // SAPF_ACCELERATE
 	
 	th.push(out);
