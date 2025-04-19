@@ -275,8 +275,12 @@ void sfwrite(Thread& th, V& v, Arg filename, bool openIt)
 	
 	makeRecordingPath(filename, path, 1024);
 
-	
-	std::unique_ptr<SoundFile> soundFile = sfcreate(th, path, numChannels, 0., true, false);
+
+	#ifdef SAPF_AUDIOTOOLBOX
+		std::unique_ptr<SoundFile> soundFile = sfcreate(th, path, numChannels, 0., true);
+	#else
+		std::unique_ptr<SoundFile> soundFile = sfcreate(th, path, numChannels, 0., true, false);
+	#endif
 	if (!soundFile) return;
 	
 	std::valarray<float> buf(0., numChannels * kBufSize);
