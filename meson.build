@@ -36,6 +36,9 @@ sources = [
   'src/Types.cpp',
   'src/UGen.cpp',
   'src/VM.cpp',
+  'src/ZArr.cpp',
+  'src/Buffers.cpp',
+  'src/AsyncAudioFileWriter.cpp',
 ]
 deps = []
 cpp_args = ['-std=c++17']
@@ -50,9 +53,9 @@ endif
 
 # libedit
 if host_machine.system() == 'windows'
-    deps += dependency('readline', required: true)
-    deps += dependency('history', required: true)
-    cpp_args += ['-DUSE_LIBEDIT=0', '-D_POSIX_THREAD_SAFE_FUNCTIONS']
+  deps += dependency('readline', required: true)
+  deps += dependency('history', required: true)
+  cpp_args += ['-DUSE_LIBEDIT=0', '-D_POSIX_THREAD_SAFE_FUNCTIONS']
 else
   deps += dependency('libedit', required: true)
   cpp_args += ['-DUSE_LIBEDIT=1']
@@ -63,12 +66,33 @@ if get_option('asan')
   link_args += ['-fsanitize=address']
 endif
 
+if get_option('ubsan')
+  cpp_args += ['-fsanitize=undefined', '-O1', '-fno-omit-frame-pointer', '-g']
+  link_args += ['-fsanitize=undefined']
+endif
+
+if get_option('tsan')
+  cpp_args += ['-fsanitize=thread', '-O1', '-fno-omit-frame-pointer', '-g']
+  link_args += ['-fsanitize=thread']
+endif
+
+if get_option('msan')
+  cpp_args += ['-fsanitize=memory', '-O1', '-fno-omit-frame-pointer', '-g', '-fsanitize-memory-track-origins']
+  link_args += ['-fsanitize=memory']
+endif
+
+if get_option('lsan')
+  cpp_args += ['-fsanitize=leak', '-O1', '-fno-omit-frame-pointer', '-g']
+  link_args += ['-fsanitize=leak']
+endif
+
 if get_option('accelerate')
   add_project_arguments('-DSAPF_ACCELERATE', language: ['cpp', 'objcpp'])
   link_args += ['-framework', 'Accelerate']
 else
   deps += dependency('fftw3', required: true, version: '>=3')
   deps += dependency('eigen3', required: true)
+  deps += dependency('xsimd', required: true)
 endif
 
 if get_option('apple_lock')
@@ -124,6 +148,13 @@ if get_option('manta')
   add_project_arguments('-DSAPF_MANTA', language: ['cpp', 'objcpp'])
 endif
 
+# has to be declared down here because it needs to come after any calls to
+# add_project_arguments
+subdir('third_party/r8brain')
+if not get_option('audiotoolbox')
+  deps += r8brain_dep
+endif
+
 # main should only be in release build because otherwise it conflicts with the main
 # method added by doctest in test builds
 release_sources = sources + 'src/main.cpp'
@@ -150,7 +181,7 @@ executable(
   release_sources,
   include_directories: [include_directories('include')],
   dependencies: deps,
-  cpp_args : cpp_args + ['-march==x86-64'],
+  cpp_args : cpp_args + ['-march=x86-64'],
   link_args : link_args,
   build_by_default: false
 )
@@ -201,16 +232,25 @@ executable(
 
 # tests
 test_deps = deps + dependency('doctest', required: true)
-test_sources = sources + 'test/test_MathOps.cpp'
+test_sources = sources + [
+  'test/doctest.cpp',
+  'test/test_OscilUgens.cpp',
+  'test/test_StreamOps.cpp',
+  'test/test_MathOps.cpp',
+  'test/test_AsyncAudioFileWriter.cpp',
+  'test/test_SndfileSoundFile.cpp',
+]
+test_includes = [include_directories('include'), include_directories('test/helpers')]
+test_cpp_args = cpp_args + '-DTEST_BUILD'
 
 # Just like the main executable, this respects the buildtype param. The target architecture is
 # omitted if it's a debug build, ensuring the best debugging experience
 test_sapf = executable(
   'test_sapf',
   test_sources,
-  include_directories: [include_directories('include')],
+  include_directories: test_includes,
   dependencies: test_deps,
-  cpp_args :  cpp_args + (get_option('buildtype').startswith('debug') ? [] : ['-march=native']),
+  cpp_args :  test_cpp_args + (get_option('buildtype').startswith('debug') ? [] : ['-march=native']),
   link_args : link_args,
   build_by_default: false
 )

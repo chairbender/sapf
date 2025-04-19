@@ -182,7 +182,7 @@ void sfread(Thread& th, Arg filename, int64_t offset, int64_t frames)
 {
 	const char* path = ((String*)filename.o())->s;
 
-	std::unique_ptr<SoundFile> soundFile = SoundFile::open(path, th.rate.sampleRate);
+	std::unique_ptr<SoundFile> soundFile = SoundFile::open(path, th.rate.sampleRate, th.rate.blockSize);
 
 	if(soundFile != nullptr) {
 		SFReader* sfr = new SFReader(std::move(soundFile), -1);
@@ -192,7 +192,7 @@ void sfread(Thread& th, Arg filename, int64_t offset, int64_t frames)
 
 std::unique_ptr<SoundFile> sfcreate(Thread& th, const char* path, int numChannels, double fileSampleRate, bool interleaved)
 {
-	return SoundFile::create(path, numChannels, th.rate.sampleRate, fileSampleRate, interleaved);
+	return SoundFile::create(path, numChannels, th.rate.sampleRate, fileSampleRate, interleaved, th.rate.blockSize);
 }
 
 std::atomic<int32_t> gFileCount = 0;
@@ -201,11 +201,31 @@ void makeRecordingPath(Arg filename, char* path, int len)
 {
 	if (filename.isString()) {
 		const char* recDir = getenv("SAPF_RECORDINGS");
-		if (!recDir || strlen(recDir)==0) recDir = "/tmp";
+		if (!recDir || strlen(recDir)==0) {
+			#ifdef _WIN32
+				recDir = getenv("TEMP");
+				if (!recDir || strlen(recDir)==0)
+					recDir = getenv("TMP");
+			#else
+				recDir = "/tmp";
+			#endif
+			if (!recDir || strlen(recDir)==0)
+				recDir = ".";
+		}
 		snprintf(path, len, "%s/%s.wav", recDir, ((String*)filename.o())->s);
 	} else {
 		int32_t count = ++gFileCount;
-		snprintf(path, len, "/tmp/sapf-%s-%04d.wav", gSessionTime, count);
+		#ifdef _WIN32
+			const char* tempDir = getenv("TEMP");
+			if (!tempDir || strlen(tempDir)==0)
+				tempDir = getenv("TMP");
+			if (!tempDir || strlen(tempDir)==0)
+				tempDir = ".";
+			snprintf(path, len, "%s\\sapf-%s-%04d.wav", tempDir, gSessionTime, count);
+		#else
+			snprintf(path, len, "/tmp/sapf-%s-%04d.wav", gSessionTime, count);
+		#endif
+
 	}
 }
 
@@ -276,15 +296,13 @@ void sfwrite(Thread& th, V& v, Arg filename, bool openIt)
 		// TODO: move into a SoundFile method
 #ifdef SAPF_AUDIOTOOLBOX
 		OSStatus err = ExtAudioFileWrite(soundFile->mXAF, minn, bufs.abl);
-#else
-		// TODO: implement writing - needs sample rate conversion too
-		int err = 666;
-#endif // SAPF_AUDIOTOOLBOX
 		if (err) {
 			post("file writing failed %d\n", (int)err);
 			break;
 		}
-
+#else
+		soundFile->write(minn, bufs);
+#endif // SAPF_AUDIOTOOLBOX
 		framesWritten += minn;
 	}
 	
@@ -294,7 +312,11 @@ void sfwrite(Thread& th, V& v, Arg filename, bool openIt)
 	
 	if (openIt) {
 		char cmd[1100];
-		snprintf(cmd, 1100, "open \"%s\"", path);
+		#ifdef _WIN32
+			snprintf(cmd, 1100, "start \"\" \"%s\"", path);
+		#else
+			snprintf(cmd, 1100, "open \"%s\"", path);
+		#endif
 		system(cmd);
 	}
 }
