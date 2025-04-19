@@ -182,7 +182,11 @@ void sfread(Thread& th, Arg filename, int64_t offset, int64_t frames)
 {
 	const char* path = ((String*)filename.o())->s;
 
+#ifdef SAPF_AUDIOTOOLBOX
+	std::unique_ptr<SoundFile> soundFile = SoundFile::open(path, th.rate.sampleRate);
+#else
 	std::unique_ptr<SoundFile> soundFile = SoundFile::open(path, th.rate.sampleRate, th.rate.blockSize);
+#endif
 
 	if(soundFile != nullptr) {
 		SFReader* sfr = new SFReader(std::move(soundFile), -1);
@@ -193,7 +197,7 @@ void sfread(Thread& th, Arg filename, int64_t offset, int64_t frames)
 #ifdef SAPF_AUDIOTOOLBOX
 std::unique_ptr<SoundFile> sfcreate(Thread& th, const char* path, int numChannels, double fileSampleRate, bool interleaved)
 {
-	return SoundFile::create(path, numChannels, th.rate.sampleRate, fileSampleRate, interleaved, th.rate.blockSize);
+	return SoundFile::create(path, numChannels, th.rate.sampleRate, fileSampleRate, interleaved);
 }
 #else
 std::unique_ptr<SoundFile> sfcreate(Thread& th, const char* path, int numChannels, double fileSampleRate, bool interleaved, bool async)
