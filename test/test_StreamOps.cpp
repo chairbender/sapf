@@ -24,7 +24,7 @@
 // non-vectorized version for comparison
 void hann_calc(Z* out, int n) {
 	for (int i = 0; i < n; i++) {
-		out[i] = 0.5 * (1 - cos(2*M_PI*i/(n-1)));
+		out[i] = 0.5 * (1 - cos(2*M_PI*i/n));
 	}
 }
 
@@ -44,7 +44,7 @@ TEST_CASE("hanning simd") {
 
 void hamm_calc(Z* out, int n) {
 	for (int i = 0; i < n; i++) {
-		out[i] = 0.54 - .46 * cos(2*M_PI*i/(n-1));
+		out[i] = 0.54 - .46 * cos(2*M_PI*i/n);
 	}
 }
 
@@ -65,8 +65,8 @@ TEST_CASE("hamming simd") {
 void blackman_calc(Z* out, int n) {
 	for (int i = 0; i < n; i++) {
 		out[i] = 0.42
-			- .5 * cos(2*M_PI*i/(n-1))
-			+ .08 * cos(4*M_PI*i/(n-1));
+			- .5 * cos(2*M_PI*i/n)
+			+ .08 * cos(4*M_PI*i/n);
 	}
 }
 
