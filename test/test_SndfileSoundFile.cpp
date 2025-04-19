@@ -83,7 +83,7 @@ TEST_CASE("SndfileSoundFile file writing") {
 		vector<float> buf(numChannels * bufferSize, 0);
         PortableBuffers bufs{1};
 		const auto sndfile = SndfileSoundFile::create(testFileName.c_str(), numChannels,
-		    sampleRate, 0., true, bufferSize);
+		    sampleRate, 0., true, bufferSize, false);
 		bufs.setNumChannels(0, numChannels);
 		bufs.setData(0, &buf[0]);
 		bufs.setSize(0, bufferSize * sizeof(float));

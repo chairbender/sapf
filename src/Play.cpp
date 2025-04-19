@@ -154,8 +154,7 @@ struct Player {
 	ZIn in[kMaxChannels];
 	// ExtAudioFileRef xaf = nullptr;
 	std::unique_ptr<SoundFile> soundFile;
-	// TODO: probably move this into SoundFile itself
-	std::unique_ptr<AsyncAudioFileWriter> writer;
+
 };
 
 #if defined(SAPF_AUDIOTOOLBOX)
@@ -261,10 +260,6 @@ struct Player* gAllPlayers = nullptr;
 Player::Player(const Thread& inThread, const int numChannels, std::unique_ptr<SoundFile> soundFile)
 	: th(inThread), count(0), done(false), prev(nullptr), next(gAllPlayers), backend(numChannels), soundFile(std::move(soundFile))
 {
-	// TODO: probably move this into SoundFile itself
-	//if (!path.empty()) {
-	//	writer = std::make_unique<AsyncAudioFileWriter>(path, vm.ar.sampleRate, inNumChannels);
-	//}
 	this->backend.player = this;
 	gAllPlayers = this;
 	if (next) next->prev = this; 
@@ -283,13 +278,6 @@ Player::~Player() {
 	
 	if (prev) prev->next = next;
 	else gAllPlayers = next;
-		
-	// if (xaf) {
-	//     ExtAudioFileDispose(xaf);
-	//     char cmd[1100];
-	//     snprintf(cmd, 1100, "open \"%s\"", path.c_str());
-	//     system(cmd);
-	// }
 }
 
 int Player::numChannels() {
@@ -330,8 +318,8 @@ static OSStatus inputCallback(	void *							inRefCon,
 }
 #else
 static void recordPlayer(const Player& player, const int nBufferFrames, const RtBuffers& buffers) {
-	if (!player.writer) return;
-	player.writer->writeAsync(buffers, nBufferFrames);
+	if (!player.soundFile) return;
+	player.soundFile->writeAsync(buffers, nBufferFrames);
 }
 int rtPlayerBackendCallback(
 	void *outputBuffer,
@@ -341,7 +329,6 @@ int rtPlayerBackendCallback(
 	RtAudioStreamStatus status,
 	void *userData
 ) {
-	float *out = (float *) outputBuffer;
 	Player *player = (Player *) userData;
 	RtBuffers buffers((float *) outputBuffer, player->numChannels(), nBufferFrames);
  
@@ -454,7 +441,6 @@ static void* stopDonePlayers(void* x)
 		std::this_thread::sleep_for(1s);
 		stopPlayingIfDone();
 	}
-	return nullptr;
 }
 
 #ifdef SAPF_AUDIOTOOLBOX
@@ -496,8 +482,6 @@ void playWithPlayer(Thread& th, V& v)
 		for (int i = 0; i < asize; ++i) {
 			player->in[i].set(a->at(i));
 		}
-		s = nullptr;
-		a = nullptr;
 	}
 	v.o = nullptr; // try to prevent leak.
     
@@ -602,7 +586,7 @@ void recordWithPlayer(Thread& th, V& v, Arg filename)
 
 	if (v.isZList()) {
 		makeRecordingPath(filename, path, 1024);
-		soundfile = sfcreate(th, path, 1, 0., false);
+		soundfile = sfcreate(th, path, 1, 0., false, true);
 		player = new Player(th, 1, std::move(soundfile));
 		player->in[0].set(v);
 	} else {
@@ -618,7 +602,7 @@ void recordWithPlayer(Thread& th, V& v, Arg filename)
 		int numChannels = (int)a->size();
 
 		makeRecordingPath(filename, path, 1024);
-		soundfile = sfcreate(th, path, 1, 0., false);
+		soundfile = sfcreate(th, path, numChannels, 0., false, true);
 
 		player = new Player(th, numChannels, std::move(soundfile));
 		for (int i = 0; i < numChannels; ++i) {
