@@ -598,10 +598,12 @@ void recordWithPlayer(Thread& th, V& v, Arg filename)
 	Player *player;
 
 	char path[1024];
+	std::unique_ptr<SoundFile> soundfile = nullptr;
 
 	if (v.isZList()) {
 		makeRecordingPath(filename, path, 1024);
-		player = new Player(th, 1, path);
+		soundfile = sfcreate(th, path, 1, 0., false);
+		player = new Player(th, 1, std::move(soundfile));
 		player->in[0].set(v);
 	} else {
 		if (!v.isFinite()) indefiniteOp("play : s", "");
@@ -616,8 +618,9 @@ void recordWithPlayer(Thread& th, V& v, Arg filename)
 		int numChannels = (int)a->size();
 
 		makeRecordingPath(filename, path, 1024);
+		soundfile = sfcreate(th, path, 1, 0., false);
 
-		player = new Player(th, numChannels, path);
+		player = new Player(th, numChannels, std::move(soundfile));
 		for (int i = 0; i < numChannels; ++i) {
 			player->in[i].set(a->at(i));
 		}
