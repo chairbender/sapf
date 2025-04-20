@@ -400,11 +400,6 @@ static int prDisconnectMIDIIn(int uid, int inputIndex)
 	return errNone;
 }
 
-static void midiList_(Thread& th, Prim* prim)
-{
-	prListMIDIEndpoints();
-}
-
 static void midiConnectInput_(Thread& th, Prim* prim)
 {
 	int index = (int)th.popInt("midiConnectInput : port");
@@ -629,11 +624,6 @@ void sendmidi(int port, int dest, int length, int hiStatus, int loStatus, int av
     }
 }
 
-static void midiList_(Thread& th, Prim* prim)
-{
-    prListMIDIEndpoints();
-}
-
 static void midiConnectInput_(Thread& th, Prim* prim)
 {
     int index = (int)th.popInt("midiConnectInput : port");
@@ -690,6 +680,12 @@ static void midiStop_(Thread& th, Prim* prim)
 	midiCleanUp();
 }
 
+static void midiList_(Thread& th, Prim* prim)
+{
+	PortableMidiClient::prListMIDIEndpoints();
+}
+
+
 #ifdef SAPF_COREMIDI
 static void midiRestart_(Thread& th, Prim* prim)
 {
@@ -702,7 +698,6 @@ static void midiRestart_(Thread& th, Prim* prim)
 	midiStart_(th, prim);
 }
 #endif
-
 
 const Z kOneOver127 = 1./127.;
 const Z kOneOver8191 = 1./8191.;
