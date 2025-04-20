@@ -21,6 +21,7 @@
 #include "ErrorCodes.hpp"
 #include <vector>
 #include "PortableMidiPacket.hpp"
+#include "PortableMidiClient.hpp"
 #ifdef SAPF_COREMIDI
 	#include <CoreMidi/CoreMidi.h>
 	#include <mach/mach_time.h>
@@ -43,14 +44,14 @@ struct MidiChanState
 	uint8_t lastvel;
 };
 
-const int kMaxMidiPorts = 16;
 MidiChanState gMidiState[kMaxMidiPorts][16];
 bool gMidiDebug = false;
 std::vector<uint8_t> gSysexData;
 static uint8_t gRunningStatus;
-int gNumMIDIInPorts = 0, gNumMIDIOutPorts = 0;
 bool gMIDIInitialized = false;
 static bool gSysexFlag = false;
+
+static std::unique_ptr<PortableMidiClient> client;
 
 static void sysexBegin() {
 	gRunningStatus = 0; // clear running status
@@ -144,7 +145,6 @@ static int midiProcessSystemPacket(const PortableMidiPacket pkt, int chan) {
 // TODO: more of below can be refactored into an abstraction to reduce duplication
 //  between macOS / not
 #ifdef SAPF_COREMIDI
-MIDIClientRef gMIDIClient = 0;
 MIDIPortRef gMIDIInPort[kMaxMidiPorts], gMIDIOutPort[kMaxMidiPorts];
 
 static int midiProcessSystemPacket(MIDIPacket *pkt, int chan) {
@@ -291,6 +291,7 @@ void sendmidi(int port, MIDIEndpointRef dest, int length, int hiStatus, int loSt
 }
 
 
+// TODO: refactor to destructor
 static int midiCleanUp()
 {
 	/*
@@ -307,13 +308,13 @@ static int midiCleanUp()
 	}
 	gNumMIDIOutPorts = 0;
 
-	for (i=0; i<gNumMIDIInPorts; ++i) {
+	for (i=0; i<client->mNumMIDIInPorts; ++i) {
 		if (gMIDIInPort[i]) {
 			MIDIPortDispose(gMIDIInPort[i]);
 			gMIDIInPort[i] = 0;
 		}
 	}
-	gNumMIDIInPorts = 0;
+	client->mNumMIDIInPorts = 0;
 
 	if (gMIDIClient) {
 		if( MIDIClientDispose(gMIDIClient) ) {
@@ -324,74 +325,6 @@ static int midiCleanUp()
 	}
 	return errNone;
 }
-
-static int prListMIDIEndpoints();
-
-static int midiInit(int numIn, int numOut)
-{
-	OSStatus err = noErr;
-	
-	midiCleanUp();
-
-	memset(gMidiState, 0, sizeof(gMidiState));
-	
-	numIn = std::clamp(numIn, 1, kMaxMidiPorts);
-	numOut = std::clamp(numOut, 1, kMaxMidiPorts);
-
-	int enc = kCFStringEncodingMacRoman;
-	CFAllocatorRef alloc = CFAllocatorGetDefault();
-
-	{
-		CFStringRef clientName = CFStringCreateWithCString(alloc, "SAPF", enc);
-		CFReleaser clientNameReleaser(clientName);
-
-		__block OSStatus err2 = noErr;
-		dispatch_sync(dispatch_get_main_queue(), ^{
-			err2 = MIDIClientCreate(clientName, midiNotifyProc, nil, &gMIDIClient);
-		});
-		printf("gMIDIClient %d\n", (int)gMIDIClient);
-		if (err2) {
-			fprintf(stderr, "Could not create MIDI client. error %d\n", err);
-			return errFailed;
-		}
-	}
-
-	for (int i=0; i<numIn; ++i) {
-		char str[32];
-		snprintf(str, 32, "in%d\n", i);
-		CFStringRef inputPortName = CFStringCreateWithCString(alloc, str, enc);
-		CFReleaser inputPortNameReleaser(inputPortName);
-
-		err = MIDIInputPortCreate(gMIDIClient, inputPortName, midiReadProc, &i, gMIDIInPort+i);
-		if (err) {
-			gNumMIDIInPorts = i;
-			fprintf(stderr, "Could not create MIDI port %s. error %d\n", str, err);
-			return errFailed;
-		}
-	}
-
-	gNumMIDIInPorts = numIn;
-
-	for (int i=0; i<numOut; ++i) {
-		char str[32];
-		snprintf(str, 32, "out%d\n", i);
-		CFStringRef outputPortName = CFStringCreateWithCString(alloc, str, enc);
-		CFReleaser outputPortNameReleaser(outputPortName);
-
-		err = MIDIOutputPortCreate(gMIDIClient, outputPortName, gMIDIOutPort+i);
-		if (err) {
-			gNumMIDIOutPorts = i;
-			fprintf(stderr, "Could not create MIDI out port. error %d\n", err);
-			return errFailed;
-		}
-	}
-	gNumMIDIOutPorts = numOut;
-	
-	prListMIDIEndpoints();
-	
-	return errNone;
-}
-
 
 static int prListMIDIEndpoints()
 {
@@ -475,7 +408,7 @@ static int prListMIDIEndpoints()
 
 static int prConnectMIDIIn(int uid, int inputIndex)
 {
-	if (inputIndex < 0 || inputIndex >= gNumMIDIInPorts) return errOutOfRange;
+	if (inputIndex < 0 || inputIndex >= client->mNumMIDIInPorts) return errOutOfRange;
 
 	MIDIEndpointRef src=0;
 	MIDIObjectType mtype;
@@ -492,7 +425,7 @@ static int prConnectMIDIIn(int uid, int inputIndex)
 
 static int prDisconnectMIDIIn(int uid, int inputIndex)
 {
-	if (inputIndex < 0 || inputIndex >= gNumMIDIInPorts) return errOutOfRange;
+	if (inputIndex < 0 || inputIndex >= client->mNumMIDIInPorts) return errOutOfRange;
 
 	MIDIEndpointRef src=0;
 	MIDIObjectType mtype;
@@ -502,17 +435,6 @@ static int prDisconnectMIDIIn(int uid, int inputIndex)
 	MIDIPortDisconnectSource(gMIDIInPort[inputIndex], src);
 
 	return errNone;
-}
-
-
-static void midiStart_(Thread& th, Prim* prim)
-{
-	midiInit(16, 19);
-}
-
-static void midiRestart_(Thread& th, Prim* prim)
-{
-	MIDIRestart();
 }
 
 static void midiStop_(Thread& th, Prim* prim)
@@ -686,7 +608,7 @@ static int midiCleanUp()
         }
     }
     gMIDIInPorts.clear();
-    gNumMIDIInPorts = 0;
+    client->mNumMIDIInPorts = 0;
     
     for (size_t i = 0; i < gMIDIOutPorts.size(); ++i) {
         if (gMIDIOutPorts[i]) {
@@ -702,101 +624,9 @@ static int midiCleanUp()
     return errNone;
 }
 
-static int prListMIDIEndpoints()
-{
-    try {
-        RtMidiIn* midiin = new RtMidiIn();
-        RtMidiOut* midiout = new RtMidiOut();
-        
-        unsigned int numSrc = midiin->getPortCount();
-        unsigned int numDst = midiout->getPortCount();
-        
-        printf("midi sources %d destinations %d\n", (int)numSrc, (int)numDst);
-        
-        for (unsigned int i = 0; i < numSrc; i++) {
-            try {
-                std::string portName = midiin->getPortName(i);
-                printf("MIDI Source %2d '%s' UID: %d\n", i, portName.c_str(), i);
-            } catch (RtMidiError &error) {
-                fprintf(stderr, "Error: %s\n", error.getMessage().c_str());
-            }
-        }
-        
-        for (unsigned int i = 0; i < numDst; i++) {
-            try {
-                std::string portName = midiout->getPortName(i);
-                printf("MIDI Destination %2d '%s' UID: %d\n", i, portName.c_str(), i);
-            } catch (RtMidiError &error) {
-                fprintf(stderr, "Error: %s\n", error.getMessage().c_str());
-            }
-        }
-        
-        delete midiin;
-        delete midiout;
-    } catch (RtMidiError &error) {
-        fprintf(stderr, "Error: %s\n", error.getMessage().c_str());
-        return errFailed;
-    }
-    
-    return errNone;
-}
-
-static int midiInit(int numIn, int numOut)
-{
-    // Clean up any existing MIDI resources
-    midiCleanUp();
-    
-    // Initialize MIDI state
-    memset(gMidiState, 0, sizeof(gMidiState));
-    
-    numIn = std::clamp(numIn, 1, kMaxMidiPorts);
-    numOut = std::clamp(numOut, 1, kMaxMidiPorts);
-    
-    try {
-        // Create and configure MIDI input ports
-        for (int i = 0; i < numIn; ++i) {
-            try {
-                RtMidiIn* midiIn = new RtMidiIn();
-                midiIn->setCallback(&midiCallback, reinterpret_cast<void*>(i));
-                midiIn->ignoreTypes(false, false, false); // Don't ignore sysex, timing, or active sensing
-                gMIDIInPorts.push_back(midiIn);
-            } catch (RtMidiError &error) {
-                fprintf(stderr, "Error creating MIDI input port %d: %s\n", i, error.getMessage().c_str());
-                continue;
-            }
-        }
-        
-        gNumMIDIInPorts = gMIDIInPorts.size();
-        
-        // Create MIDI output ports
-        for (int i = 0; i < numOut; ++i) {
-            try {
-                RtMidiOut* midiOut = new RtMidiOut();
-                gMIDIOutPorts.push_back(midiOut);
-            } catch (RtMidiError &error) {
-                fprintf(stderr, "Error creating MIDI output port %d: %s\n", i, error.getMessage().c_str());
-                continue;
-            }
-        }
-        
-        gNumMIDIOutPorts = gMIDIOutPorts.size();
-        
-        gMIDIInitialized = true;
-        
-        // List the available MIDI endpoints
-        prListMIDIEndpoints();
-        
-        return errNone;
-    } catch (RtMidiError &error) {
-        fprintf(stderr, "Error initializing MIDI: %s\n", error.getMessage().c_str());
-        midiCleanUp();
-        return errFailed;
-    }
-}
-
 static int prConnectMIDIIn(int uid, int inputIndex)
 {
-    if (inputIndex < 0 || inputIndex >= gNumMIDIInPorts) return errOutOfRange;
+    if (inputIndex < 0 || inputIndex >= client->mNumMIDIInPorts) return errOutOfRange;
     
     try {
         RtMidiIn* midiIn = gMIDIInPorts[inputIndex];
@@ -822,7 +652,7 @@ static int prConnectMIDIIn(int uid, int inputIndex)
 
 static int prDisconnectMIDIIn(int uid, int inputIndex)
 {
-    if (inputIndex < 0 || inputIndex >= gNumMIDIInPorts) return errOutOfRange;
+    if (inputIndex < 0 || inputIndex >= client->mNumMIDIInPorts) return errOutOfRange;
     
     try {
         RtMidiIn* midiIn = gMIDIInPorts[inputIndex];
@@ -868,16 +698,6 @@ void sendmidi(int port, int dest, int length, int hiStatus, int loStatus, int av
     }
 }
 
-static void midiStart_(Thread& th, Prim* prim)
-{
-    midiInit(16, 16);
-}
-
-static void midiRestart_(Thread& th, Prim* prim)
-{
-    midiInit(gNumMIDIInPorts, gNumMIDIOutPorts);
-}
-
 static void midiStop_(Thread& th, Prim* prim)
 {
     midiCleanUp();
@@ -908,6 +728,44 @@ static void midiDebug_(Thread& th, Prim* prim)
 }
 
 #endif // SAPF_COREMIDI
+
+
+static int midiInit(int numIn, int numOut)
+{
+	memset(gMidiState, 0, sizeof(gMidiState));
+	
+	numIn = std::clamp(numIn, 1, kMaxMidiPorts);
+	numOut = std::clamp(numOut, 1, kMaxMidiPorts);
+
+	#ifdef SAPF_COREMIDI
+		client = std::make_unique<PortableMidiClient>(numIn, numOut, midiReadProc, midiNotifyProc);
+	#else
+		client = std::make_unique<PortableMidiClient>(numIn, numOut, &midiCallback);
+	#endif
+
+	PortableMidiClient::prListMIDIEndpoints();
+	
+	return errNone;
+}
+
+static void midiStart_(Thread& th, Prim* prim)
+{
+	midiInit(16, 19);
+}
+
+#ifdef SAPF_COREMIDI
+static void midiRestart_(Thread& th, Prim* prim)
+{
+	MIDIRestart();
+}
+#else
+// TODO: not quite sure what this should do on RtMidi
+static void midiRestart_(Thread& th, Prim* prim)
+{
+	midiStart_(th, prim);
+}
+#endif
+
 
 const Z kOneOver127 = 1./127.;
 const Z kOneOver8191 = 1./8191.;
