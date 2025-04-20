@@ -40,6 +40,7 @@ sources = [
   'src/Buffers.cpp',
   'src/AsyncAudioFileWriter.cpp',
   'src/PortableMidiPacket.cpp',
+  'src/PortableMidiClient.cpp',
 ]
 deps = []
 cpp_args = ['-std=c++17']

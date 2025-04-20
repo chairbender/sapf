@@ -19,8 +19,8 @@ const uint8_t* PortableMidiPacket::bytes() const {
     return this->mMessage.data();
 }
 
-const int PortableMidiPacket::length() const {
-    return this->mMessage.size();
+int PortableMidiPacket::length() const {
+    return static_cast<int>(this->mMessage.size());
 }
 #endif
 

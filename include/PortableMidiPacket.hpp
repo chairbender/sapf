@@ -15,9 +15,9 @@ public:
         PortableMidiPacket(const std::vector<unsigned char>& message);
     #endif
     // number of MIDI bytes in this packet
-    const int length() const;
+    [[nodiscard]] int length() const;
     // variable length stream of midi messages
-    const uint8_t* bytes() const;
+    [[nodiscard]] const uint8_t* bytes() const;
 private:
     #ifdef SAPF_COREMIDI
         const MIDIPacket* mMidiPacket;
