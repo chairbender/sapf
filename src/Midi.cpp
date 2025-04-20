@@ -79,8 +79,8 @@ static int midiProcessSystemPacket(MIDIPacket *pkt, int chan) {
 		{
 		int last_uid = 0;
 		int m = pkt->length;
-		Byte* p_pkt = pkt->data;
-		Byte pktval;
+		uint8_t* p_pkt = pkt->data;
+		uint8_t pktval;
 
 		while(m--) {
 			pktval = *p_pkt++;
@@ -281,9 +281,9 @@ void sendmidi(int port, MIDIEndpointRef dest, int length, int hiStatus, int loSt
 	MIDIPacketList * pktlist = &mpktlist;
 	MIDIPacket * pk = MIDIPacketListInit(pktlist);
 	ByteCount nData = (ByteCount) length;
-	pk->data[0] = (Byte) (hiStatus & 0xF0) | (loStatus & 0x0F);
-	pk->data[1] = (Byte) aval;
-	pk->data[2] = (Byte) bval;
+	pk->data[0] = (uint8_t) (hiStatus & 0xF0) | (loStatus & 0x0F);
+	pk->data[1] = (uint8_t) aval;
+	pk->data[2] = (uint8_t) bval;
 	pk = MIDIPacketListAdd(pktlist, sizeof(struct MIDIPacketList) , pk, midiTime(late), nData, pk->data);
 	/*OSStatus error =*/ MIDISend(gMIDIOutPort[port],  dest, pktlist );
 }
