@@ -133,6 +133,8 @@ endif
 if get_option('coremidi')
   add_project_arguments('-DSAPF_COREMIDI', language: ['cpp', 'objcpp'])
   link_args += ['-framework', 'CoreMIDI']
+else
+  deps += dependency('rtmidi', required: true) 
 endif
 
 if get_option('dispatch')
