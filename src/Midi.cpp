@@ -20,6 +20,7 @@
 #include "UGen.hpp"
 #include "ErrorCodes.hpp"
 #include <vector>
+#include "PortableMidiPacket.hpp"
 #ifdef SAPF_COREMIDI
 	#include <CoreMidi/CoreMidi.h>
 	#include <mach/mach_time.h>
@@ -65,6 +66,81 @@ static void sysexEndInvalid() {
 	gSysexFlag = false;
 }
 
+static int midiProcessSystemPacket(const PortableMidiPacket pkt, int chan) {
+	int index, data;
+	switch (chan) {
+		case 7: // added cp: Sysex EOX must be taken into account if first on data packet
+		case 0:
+		{
+			int last_uid = 0;
+			auto m = pkt.length();
+			auto p_pkt = pkt.bytes();
+			uint8_t pktval;
+
+			while(m--) {
+				pktval = *p_pkt++;
+				if(pktval & 0x80) { // status byte
+					if(pktval == 0xF7) { // end packet
+						gSysexData.push_back(pktval); // add EOX
+						if(gSysexFlag)
+							sysexEnd(last_uid); // if last_uid != 0 rebuild the VM.
+						else
+							sysexEndInvalid(); // invalid 1 byte with only EOX can happen
+						break;
+					}
+					else if(pktval == 0xF0) { // new packet
+						if(gSysexFlag) {// invalid new one/should not happen -- but handle in case
+							// store the last uid value previous to invalid data to rebuild VM after sysexEndInvalid call
+							// since it may call sysexEnd() just after it !
+							sysexEndInvalid();
+						}
+						sysexBegin(); // new sysex in
+						//gSysexData.push_back(pktval); // add SOX
+					}
+					else {// abnormal data in middle of sysex packet
+						//gSysexData.push_back(pktval); // add it as an abort message
+						sysexEndInvalid(); // flush invalid
+						m = 0; // discard all packet
+						break;
+					}
+				}
+				else if(gSysexFlag) {
+					//gSysexData.push_back(pktval); // add Byte
+				} else { // garbage - handle in case - discard it
+					break;
+				}
+			}
+			return (pkt.length()-m);
+		}
+			break;
+
+		case 1 :
+			index = pkt.bytes()[1] >> 4;
+			data  = pkt.bytes()[1] & 0xf;
+			switch (index) { case 1: case 3: case 5: case 7: { data = data << 4; } }
+			return 2;
+
+		case 2 : 	//songptr
+			return 3;
+
+		case 3 :	// song select
+			return 2;
+
+		case 8 :	//clock
+		case 10:	//start
+		case 11:	//continue
+		case 12: 	//stop
+		case 15:	//reset
+			gRunningStatus = 0; // clear running status
+			return 1;
+
+		default:
+			break;
+	}
+
+	return (1);
+}
+
 // TODO: more of below can be refactored into an abstraction to reduce duplication
 //  between macOS / not
 #ifdef SAPF_COREMIDI
@@ -72,82 +148,8 @@ MIDIClientRef gMIDIClient = 0;
 MIDIPortRef gMIDIInPort[kMaxMidiPorts], gMIDIOutPort[kMaxMidiPorts];
 
 static int midiProcessSystemPacket(MIDIPacket *pkt, int chan) {
-	int index, data;
-	switch (chan) {
-	case 7: // added cp: Sysex EOX must be taken into account if first on data packet
-	case 0:
-		{
-		int last_uid = 0;
-		int m = pkt->length;
-		uint8_t* p_pkt = pkt->data;
-		uint8_t pktval;
-
-		while(m--) {
-			pktval = *p_pkt++;
-			if(pktval & 0x80) { // status byte
-				if(pktval == 0xF7) { // end packet
-					gSysexData.push_back(pktval); // add EOX
-					if(gSysexFlag)
-						sysexEnd(last_uid); // if last_uid != 0 rebuild the VM.
-					else
-						sysexEndInvalid(); // invalid 1 byte with only EOX can happen
-					break;
-				}
-				else if(pktval == 0xF0) { // new packet
-					if(gSysexFlag) {// invalid new one/should not happen -- but handle in case
-						// store the last uid value previous to invalid data to rebuild VM after sysexEndInvalid call
-						// since it may call sysexEnd() just after it !
-						sysexEndInvalid();
-					}
-					sysexBegin(); // new sysex in
-					//gSysexData.push_back(pktval); // add SOX
-				}
-				else {// abnormal data in middle of sysex packet
-					//gSysexData.push_back(pktval); // add it as an abort message
-					sysexEndInvalid(); // flush invalid
-					m = 0; // discard all packet
-					break;
-				}
-			}
-			else if(gSysexFlag) {
-				//gSysexData.push_back(pktval); // add Byte
-			} else { // garbage - handle in case - discard it
-				break;
-			}
-		}
-		return (pkt->length-m);
-		}
-	break;
-
-	case 1 :
-		index = pkt->data[1] >> 4;
-		data  = pkt->data[1] & 0xf;
-		switch (index) { case 1: case 3: case 5: case 7: { data = data << 4; } }
-		return 2;
-
-	case 2 : 	//songptr
-		return 3;
-
-	case 3 :	// song select
-		return 2;
-
-	case 8 :	//clock
-	case 10:	//start
-	case 11:	//continue
-	case 12: 	//stop
-	case 15:	//reset
-		gRunningStatus = 0; // clear running status
-		return 1;
-
-	default:
-		break;
-	}
-
-	return (1);
+	return midiProcessSystemPacket(PortableMidiPacket{pkt}, chan)
 }
-
-
-
 
 static void midiProcessPacket(MIDIPacket *pkt, int srcIndex)
 {
@@ -551,84 +553,7 @@ std::vector<RtMidiOut*> gMIDIOutPorts;
 static int midiProcessSystemPacket(const std::vector<unsigned char>& message, int startIdx, int chan)
 {
     if (startIdx >= message.size()) return 0;
-    
-    uint8_t statusByte = message[startIdx];
-    
-    switch (chan) {
-    case 7: // added cp: Sysex EOX must be taken into account if first on data packet
-    case 0: // SysEx
-        {
-            int last_uid = 0;
-            int m = message.size() - startIdx;
-            const uint8_t* p_pkt = &message[startIdx];
-            uint8_t pktval;
-            int bytesProcessed = 0;
-            
-            while(m > 0) {
-                pktval = *p_pkt++;
-                bytesProcessed++;
-                m--;
-                
-                if(pktval & 0x80) { // status byte
-                    if(pktval == 0xF7) { // end packet
-                        gSysexData.push_back(pktval); // add EOX
-                        if(gSysexFlag)
-                            sysexEnd(last_uid); // if last_uid != 0 rebuild the VM.
-                        else
-                            sysexEndInvalid(); // invalid 1 byte with only EOX can happen
-                        break;
-                    }
-                    else if(pktval == 0xF0) { // new packet
-                        if(gSysexFlag) {// invalid new one/should not happen -- but handle in case
-                            sysexEndInvalid();
-                        }
-                        sysexBegin(); // new sysex in
-                        //gSysexData.push_back(pktval); // add SOX
-                    }
-                    else {// abnormal data in middle of sysex packet
-                        sysexEndInvalid(); // flush invalid
-                        m = 0; // discard all packet
-                        break;
-                    }
-                }
-                else if(gSysexFlag) {
-                    //gSysexData.push_back(pktval); // add Byte
-                } else { // garbage - handle in case - discard it
-                    break;
-                }
-            }
-            return bytesProcessed;
-        }
-        break;
-        
-    case 1: // MTC Quarter Frame
-        if (startIdx + 1 < message.size()) {
-            int index = message[startIdx + 1] >> 4;
-            int data  = message[startIdx + 1] & 0xf;
-            switch (index) { case 1: case 3: case 5: case 7: { data = data << 4; } }
-            return 2;
-        }
-        return 1;
-        
-    case 2: // Song Position Pointer
-        return (startIdx + 2 < message.size()) ? 3 : 1;
-        
-    case 3: // Song Select
-        return (startIdx + 1 < message.size()) ? 2 : 1;
-        
-    case 8:  // Timing Clock
-    case 10: // Start
-    case 11: // Continue
-    case 12: // Stop
-    case 15: // Reset
-        gRunningStatus = 0; // clear running status
-        return 1;
-        
-    default:
-        return 1;
-    }
-    
-    return 1;
+	return midiProcessSystemPacket(PortableMidiPacket{message}, chan);
 }
 
 static void midiProcessPacket(const std::vector<unsigned char>& message, int srcIndex)

@@ -39,6 +39,7 @@ sources = [
   'src/ZArr.cpp',
   'src/Buffers.cpp',
   'src/AsyncAudioFileWriter.cpp',
+  'src/PortableMidiPacket.cpp',
 ]
 deps = []
 cpp_args = ['-std=c++17']
