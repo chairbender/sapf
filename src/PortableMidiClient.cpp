@@ -54,6 +54,38 @@ PortableMidiClient::PortableMidiClient(const int numIn, const int numOut, const 
     mNumMIDIOutPorts = numOut;
 }
 
+PortableMidiClient::~PortableMidiClient() {
+	/*
+	* do not catch errors when disposing ports
+	*/
+	int i = 0;
+	for (i=0; i<mNumMIDIOutPorts; ++i) {
+		if (mMIDIOutPort[i]) {
+			MIDIPortDispose(mMIDIOutPort[i]);
+		}
+	}
+
+	for (i=0; i<mNumMIDIInPorts; ++i) {
+		if (mMIDIInPort[i]) {
+			MIDIPortDispose(mMIDIInPort[i]);
+		}
+	}
+
+	if (mMIDIClient) {
+		if( MIDIClientDispose(mMIDIClient) ) {
+			fprintf(stderr, "Error: failed to dispose MIDIClient\n" );
+		}
+	}
+}
+
+int PortableMidiClient::numMidiInPorts() const {
+	return mNumMidiInPorts;
+}
+
+int PortableMidiClient::numMidiOutPorts() const {
+	return mNumMidiOutPorts;
+}
+
 void PortableMidiClient::prListMIDIEndpoints() {
     OSStatus error;
 	int numSrc = (int)MIDIGetNumberOfSources();
@@ -136,31 +168,47 @@ PortableMidiClient::PortableMidiClient(const int numIn, const int numOut, const 
         // Create and configure MIDI input ports
         for (int i = 0; i < numIn; ++i) {
             try {
-                auto midiIn = new RtMidiIn();
+            	auto midiIn = std::make_unique<RtMidiIn>();
                 midiIn->setCallback(midiCallback, reinterpret_cast<void*>(i));
                 midiIn->ignoreTypes(false, false, false); // Don't ignore sysex, timing, or active sensing
-                mMIDIInPorts.push_back(midiIn);
             } catch (RtMidiError &error) {
                 fprintf(stderr, "Error creating MIDI input port %d: %s\n", i, error.getMessage().c_str());
             }
         }
-        
-        mNumMidiInPorts = mMIDIInPorts.size();
-        
+
         // Create MIDI output ports
         for (int i = 0; i < numOut; ++i) {
             try {
-                auto midiOut = new RtMidiOut();
-                mMIDIOutPorts.push_back(midiOut);
+                mMIDIOutPorts.push_back(std::make_unique<RtMidiOut>());
             } catch (RtMidiError &error) {
                 fprintf(stderr, "Error creating MIDI output port %d: %s\n", i, error.getMessage().c_str());
             }
         }
-        
-        mNumMidiOutPorts = mMIDIOutPorts.size();
     } catch (RtMidiError &error) {
         fprintf(stderr, "Error initializing MIDI: %s\n", error.getMessage().c_str());
     } 
+}
+
+PortableMidiClient::~PortableMidiClient() {
+    for (const auto& midiInPort : mMIDIInPorts) {
+        if (midiInPort) {
+            midiInPort->closePort();
+        }
+    }
+
+    for (const auto& midiOutPort : mMIDIOutPorts) {
+        if (midiOutPort) {
+            midiOutPort->closePort();
+        }
+    }
+}
+
+int PortableMidiClient::numMidiInPorts() const {
+	return mMIDIInPorts.size();
+}
+
+int PortableMidiClient::numMidiOutPorts() const {
+	return mMIDIOutPorts.size();
 }
 
 void PortableMidiClient::prListMIDIEndpoints() {

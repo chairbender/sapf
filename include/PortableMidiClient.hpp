@@ -6,6 +6,7 @@
     #include <vector>
     #include "RtMidi.h"
 #endif
+#include <memory>
 
 const int kMaxMidiPorts = 16;
 
@@ -23,18 +24,20 @@ public:
     // TODO: teardown
     ~PortableMidiClient();
 
+    [[nodiscard]] int numMidiInPorts() const;
+    [[nodiscard]] int numMidiOutPorts() const;
+
     // print the list of midi endpoints to stdout
     static void prListMIDIEndpoints();
-
-    int mNumMidiInPorts;
-    int mNumMidiOutPorts;
 private:
     #ifdef SAPF_COREMIDI
+        int mNumMidiInPorts;
+        int mNumMidiOutPorts;
         MIDIClientRef mMIDIClient;
         MIDIPortRef mMIDIInPgort[kMaxMidiPorts], mMIDIOutPort[kMaxMidiPorts];
     #else
-        std::vector<RtMidiIn*> mMIDIInPorts;
-        std::vector<RtMidiOut*> mMIDIOutPorts;
+        std::vector<std::unique_ptr<RtMidiIn>> mMIDIInPorts;
+        std::vector<std::unique_ptr<RtMidiOut>> mMIDIOutPorts;
     #endif
 
 };

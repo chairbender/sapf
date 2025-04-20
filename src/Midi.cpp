@@ -48,10 +48,9 @@ MidiChanState gMidiState[kMaxMidiPorts][16];
 bool gMidiDebug = false;
 std::vector<uint8_t> gSysexData;
 static uint8_t gRunningStatus;
-bool gMIDIInitialized = false;
 static bool gSysexFlag = false;
 
-static std::unique_ptr<PortableMidiClient> client;
+static std::unique_ptr<PortableMidiClient> gMidiClient;
 
 static void sysexBegin() {
 	gRunningStatus = 0; // clear running status
@@ -290,42 +289,6 @@ void sendmidi(int port, MIDIEndpointRef dest, int length, int hiStatus, int loSt
 	/*OSStatus error =*/ MIDISend(gMIDIOutPort[port],  dest, pktlist );
 }
 
-
-// TODO: refactor to destructor
-static int midiCleanUp()
-{
-	/*
-	* do not catch errors when disposing ports
-	* MIDIClientDispose should normally dispose the ports attached to it
-	* but clean up the pointers in case
-	*/
-	int i = 0;
-	for (i=0; i<gNumMIDIOutPorts; ++i) {
-		if (gMIDIOutPort[i]) {
-			MIDIPortDispose(gMIDIOutPort[i]);
-			gMIDIOutPort[i] = 0;
-		}
-	}
-	gNumMIDIOutPorts = 0;
-
-	for (i=0; i<client->mNumMIDIInPorts; ++i) {
-		if (gMIDIInPort[i]) {
-			MIDIPortDispose(gMIDIInPort[i]);
-			gMIDIInPort[i] = 0;
-		}
-	}
-	client->mNumMIDIInPorts = 0;
-
-	if (gMIDIClient) {
-		if( MIDIClientDispose(gMIDIClient) ) {
-			fprintf(stderr, "Error: failed to dispose MIDIClient\n" );
-			return errFailed;
-		}
-		gMIDIClient = 0;
-	}
-	return errNone;
-}
-
 static int prListMIDIEndpoints()
 {
 	OSStatus error;
@@ -435,11 +398,6 @@ static int prDisconnectMIDIIn(int uid, int inputIndex)
 	MIDIPortDisconnectSource(gMIDIInPort[inputIndex], src);
 
 	return errNone;
-}
-
-static void midiStop_(Thread& th, Prim* prim)
-{
-	midiCleanUp();
 }
 
 static void midiList_(Thread& th, Prim* prim)
@@ -597,36 +555,9 @@ static void midiCallback(double timeStamp, std::vector<unsigned char>* message, 
     midiProcessPacket(*message, srcIndex);
 }
 
-static int midiCleanUp()
-{
-    // Clean up all MIDI ports
-    for (size_t i = 0; i < gMIDIInPorts.size(); ++i) {
-        if (gMIDIInPorts[i]) {
-            gMIDIInPorts[i]->closePort();
-            delete gMIDIInPorts[i];
-            gMIDIInPorts[i] = nullptr;
-        }
-    }
-    gMIDIInPorts.clear();
-    client->mNumMIDIInPorts = 0;
-    
-    for (size_t i = 0; i < gMIDIOutPorts.size(); ++i) {
-        if (gMIDIOutPorts[i]) {
-            gMIDIOutPorts[i]->closePort();
-            delete gMIDIOutPorts[i];
-            gMIDIOutPorts[i] = nullptr;
-        }
-    }
-    gMIDIOutPorts.clear();
-    gNumMIDIOutPorts = 0;
-    
-    gMIDIInitialized = false;
-    return errNone;
-}
-
 static int prConnectMIDIIn(int uid, int inputIndex)
 {
-    if (inputIndex < 0 || inputIndex >= client->mNumMIDIInPorts) return errOutOfRange;
+    if (inputIndex < 0 || inputIndex >= gMidiClient->mNumMIDIInPorts) return errOutOfRange;
     
     try {
         RtMidiIn* midiIn = gMIDIInPorts[inputIndex];
@@ -652,7 +583,7 @@ static int prConnectMIDIIn(int uid, int inputIndex)
 
 static int prDisconnectMIDIIn(int uid, int inputIndex)
 {
-    if (inputIndex < 0 || inputIndex >= client->mNumMIDIInPorts) return errOutOfRange;
+    if (inputIndex < 0 || inputIndex >= gMidiClient->mNumMIDIInPorts) return errOutOfRange;
     
     try {
         RtMidiIn* midiIn = gMIDIInPorts[inputIndex];
@@ -698,11 +629,6 @@ void sendmidi(int port, int dest, int length, int hiStatus, int loStatus, int av
     }
 }
 
-static void midiStop_(Thread& th, Prim* prim)
-{
-    midiCleanUp();
-}
-
 static void midiList_(Thread& th, Prim* prim)
 {
     prListMIDIEndpoints();
@@ -740,7 +666,7 @@ static int midiInit(int numIn, int numOut)
 	#ifdef SAPF_COREMIDI
 		client = std::make_unique<PortableMidiClient>(numIn, numOut, midiReadProc, midiNotifyProc);
 	#else
-		client = std::make_unique<PortableMidiClient>(numIn, numOut, &midiCallback);
+		gMidiClient = std::make_unique<PortableMidiClient>(numIn, numOut, &midiCallback);
 	#endif
 
 	PortableMidiClient::prListMIDIEndpoints();
@@ -748,9 +674,20 @@ static int midiInit(int numIn, int numOut)
 	return errNone;
 }
 
+static int midiCleanUp()
+{
+	gMidiClient = nullptr;
+	return errNone;
+}
+
 static void midiStart_(Thread& th, Prim* prim)
 {
 	midiInit(16, 19);
+}
+
+static void midiStop_(Thread& th, Prim* prim)
+{
+	midiCleanUp();
 }
 
 #ifdef SAPF_COREMIDI
