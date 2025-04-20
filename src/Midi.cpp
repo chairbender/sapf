@@ -548,8 +548,6 @@ static void midiDebug_(Thread& th, Prim* prim)
 std::vector<RtMidiIn*> gMIDIInPorts;
 std::vector<RtMidiOut*> gMIDIOutPorts;
 
-// TODO: process system packet
-
 static int midiProcessSystemPacket(const std::vector<unsigned char>& message, int startIdx, int chan)
 {
     if (startIdx >= message.size()) return 0;
