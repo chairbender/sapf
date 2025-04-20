@@ -66,7 +66,7 @@ static void sysexEndInvalid() {
 	gSysexFlag = false;
 }
 
-static int midiProcessSystemPacket(const PortableMidiPacket pkt, int chan) {
+static int midiProcessSystemPacket(const PortableMidiPacket& pkt, const int chan) {
 	int index, data;
 	switch (chan) {
 		case 7: // added cp: Sysex EOX must be taken into account if first on data packet
@@ -139,6 +139,99 @@ static int midiProcessSystemPacket(const PortableMidiPacket pkt, int chan) {
 	}
 
 	return (1);
+}
+
+static void midiProcessPacket(const PortableMidiPacket& pkt, const int srcIndex)
+{
+	int i = 0;
+	while (i < pkt.length()) {
+		uint8_t status = pkt.bytes()[i] & 0xF0;
+		uint8_t chan = pkt.bytes()[i] & 0x0F;
+		uint8_t a, b;
+
+		if(status & 0x80) // set the running status for voice messages
+			gRunningStatus = ((status >> 4) == 0xF) ? 0 : pkt.bytes()[i]; // keep also additional info
+	L:
+		switch (status) {
+		case 0x80 : //noteOff
+			a = pkt.bytes()[i+1];
+			b = pkt.bytes()[i+2];
+			if (gMidiDebug) printf("midi note off %d %d %d %d\n", srcIndex, chan+1, a, b);
+			gMidiState[srcIndex][chan].keyvel[a] = 0;
+			--gMidiState[srcIndex][chan].numKeysDown;
+			i += 3;
+			break;
+		case 0x90 : //noteOn
+			a = pkt.bytes()[i+1];
+			b = pkt.bytes()[i+2];
+			if (gMidiDebug) printf("midi note on %d %d %d %d\n", srcIndex, chan+1, a, b);
+			if (b) {
+				gMidiState[srcIndex][chan].lastkey = a;
+				gMidiState[srcIndex][chan].lastvel = b;
+				++gMidiState[srcIndex][chan].numKeysDown;
+			} else {
+				--gMidiState[srcIndex][chan].numKeysDown;
+			}
+			gMidiState[srcIndex][chan].keyvel[a] = b;
+			i += 3;
+			break;
+		case 0xA0 : //polytouch
+			a = pkt.bytes()[i+1];
+			b = pkt.bytes()[i+2];
+			if (gMidiDebug) printf("midi poly %d %d %d %d\n", srcIndex, chan+1, a, b);
+			gMidiState[srcIndex][chan].polytouch[a] = b;
+			i += 3;
+			break;
+		case 0xB0 : //control
+			a = pkt.bytes()[i+1];
+			b = pkt.bytes()[i+2];
+			if (gMidiDebug) printf("midi control %d %d %d %d\n", srcIndex, chan+1, a, b);
+			gMidiState[srcIndex][chan].control[a] = b;
+			if (a == 120 || (a >= 123 && a <= 127)) {
+				// all notes off
+				memset(gMidiState[srcIndex][chan].keyvel, 0, 128);
+				gMidiState[srcIndex][chan].numKeysDown = 0;
+			} else if (a == 121) {
+				// reset ALL controls to zero, don't follow MMA recommended practices.
+				memset(gMidiState[srcIndex][chan].control, 0, 128);
+				gMidiState[srcIndex][chan].bend = 0x4000;
+			}
+			i += 3;
+			break;
+		case 0xC0 : //program
+			a = pkt.bytes()[i+1];
+			gMidiState[srcIndex][chan].program = a;
+			if (gMidiDebug) printf("midi program %d %d %d\n", srcIndex, chan+1, a);
+			i += 2;
+			break;
+		case 0xD0 : //touch
+			a = pkt.bytes()[i+1];
+			printf("midi touch %d %d\n", chan+1, a);
+			gMidiState[srcIndex][chan].touch = a;
+			i += 2;
+			break;
+		case 0xE0 : //bend
+			a = pkt.bytes()[i+1];
+			b = pkt.bytes()[i+2];
+			if (gMidiDebug) printf("midi bend %d %d %d %d\n", srcIndex, chan+1, a, b);
+			gMidiState[srcIndex][chan].bend = ((b << 7) | a) - 8192;
+			i += 3;
+			break;
+		case 0xF0 :
+			i += midiProcessSystemPacket(pkt, chan);
+			break;
+		default :	// data byte => continuing sysex message
+			if(gRunningStatus && !gSysexFlag) { // modified cp: handling running status. may be we should here
+				status = gRunningStatus & 0xF0; // accept running status only inside a packet beginning
+				chan = gRunningStatus & 0x0F;	// with a valid status byte ?
+				--i;
+				goto L; // parse again with running status set
+			}
+			chan = 0;
+			i += midiProcessSystemPacket(pkt, chan);
+			break;
+		}
+	}
 }
 
 // TODO: more of below can be refactored into an abstraction to reduce duplication
@@ -250,7 +343,7 @@ static void midiReadProc(const MIDIPacketList *pktlist, void* readProcRefCon, vo
 	MIDIPacket *pkt = (MIDIPacket*)pktlist->packet;
 	int srcIndex = (int)(size_t) srcConnRefCon;
 	for (uint32_t i=0; i<pktlist->numPackets; ++i) {
-		midiProcessPacket(pkt, srcIndex);
+		midiProcessPacket(PortableMidiPacket{pkt}, srcIndex);
 		pkt = MIDIPacketNext(pkt);
 	}
 }

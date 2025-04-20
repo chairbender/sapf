@@ -12,7 +12,7 @@ public:
     #ifdef SAPF_COREMIDI
         PortableMidiPacket(const MIDIPacket* midiPacket);
     #else
-        PortableMidiPacket(const std::vector<unsigned char>& message);
+        explicit PortableMidiPacket(const std::vector<unsigned char>& message);
     #endif
     // number of MIDI bytes in this packet
     [[nodiscard]] int length() const;
