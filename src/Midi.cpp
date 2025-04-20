@@ -65,6 +65,8 @@ static void sysexEndInvalid() {
 	gSysexFlag = false;
 }
 
+// TODO: more of below can be refactored into an abstraction to reduce duplication
+//  between macOS / not
 #ifdef SAPF_COREMIDI
 MIDIClientRef gMIDIClient = 0;
 MIDIPortRef gMIDIInPort[kMaxMidiPorts], gMIDIOutPort[kMaxMidiPorts];
@@ -548,6 +550,89 @@ std::vector<RtMidiOut*> gMIDIOutPorts;
 
 // TODO: process system packet
 
+static int midiProcessSystemPacket(const std::vector<unsigned char>& message, int startIdx, int chan)
+{
+    if (startIdx >= message.size()) return 0;
+    
+    uint8_t statusByte = message[startIdx];
+    
+    switch (chan) {
+    case 7: // added cp: Sysex EOX must be taken into account if first on data packet
+    case 0: // SysEx
+        {
+            int last_uid = 0;
+            int m = message.size() - startIdx;
+            const uint8_t* p_pkt = &message[startIdx];
+            uint8_t pktval;
+            int bytesProcessed = 0;
+            
+            while(m > 0) {
+                pktval = *p_pkt++;
+                bytesProcessed++;
+                m--;
+                
+                if(pktval & 0x80) { // status byte
+                    if(pktval == 0xF7) { // end packet
+                        gSysexData.push_back(pktval); // add EOX
+                        if(gSysexFlag)
+                            sysexEnd(last_uid); // if last_uid != 0 rebuild the VM.
+                        else
+                            sysexEndInvalid(); // invalid 1 byte with only EOX can happen
+                        break;
+                    }
+                    else if(pktval == 0xF0) { // new packet
+                        if(gSysexFlag) {// invalid new one/should not happen -- but handle in case
+                            sysexEndInvalid();
+                        }
+                        sysexBegin(); // new sysex in
+                        //gSysexData.push_back(pktval); // add SOX
+                    }
+                    else {// abnormal data in middle of sysex packet
+                        sysexEndInvalid(); // flush invalid
+                        m = 0; // discard all packet
+                        break;
+                    }
+                }
+                else if(gSysexFlag) {
+                    //gSysexData.push_back(pktval); // add Byte
+                } else { // garbage - handle in case - discard it
+                    break;
+                }
+            }
+            return bytesProcessed;
+        }
+        break;
+        
+    case 1: // MTC Quarter Frame
+        if (startIdx + 1 < message.size()) {
+            int index = message[startIdx + 1] >> 4;
+            int data  = message[startIdx + 1] & 0xf;
+            switch (index) { case 1: case 3: case 5: case 7: { data = data << 4; } }
+            return 2;
+        }
+        return 1;
+        
+    case 2: // Song Position Pointer
+        return (startIdx + 2 < message.size()) ? 3 : 1;
+        
+    case 3: // Song Select
+        return (startIdx + 1 < message.size()) ? 2 : 1;
+        
+    case 8:  // Timing Clock
+    case 10: // Start
+    case 11: // Continue
+    case 12: // Stop
+    case 15: // Reset
+        gRunningStatus = 0; // clear running status
+        return 1;
+        
+    default:
+        return 1;
+    }
+    
+    return 1;
+}
+
 static void midiProcessPacket(const std::vector<unsigned char>& message, int srcIndex)
 {
     if (message.empty()) return;
@@ -633,31 +718,26 @@ static void midiProcessPacket(const std::vector<unsigned char>& message, int src
             gMidiState[srcIndex][chan].bend = ((b << 7) | a) - 8192;
             i += 3;
             break;
-        case 0xF0 : //sysex
-            // Simple sysex handling
-            if (message[i] == 0xF0) {
-                sysexBegin();
-                // Look for end of sysex (0xF7)
-                size_t j = i + 1;
-                while (j < message.size() && message[j] != 0xF7) {
-                    j++;
-                }
-                if (j < message.size() && message[j] == 0xF7) {
-                    sysexEnd(0);
-                }
-                i = j + 1;
-            } else {
-                i++;
-            }
+        case 0xF0 : // System messages
+            i += midiProcessSystemPacket(message, i, chan);
             break;
-        default :
+        default :  // Data byte or unrecognized status
             if(gRunningStatus && !gSysexFlag) {
                 status = gRunningStatus & 0xF0;
                 chan = gRunningStatus & 0x0F;
                 --i;
                 goto L; // parse again with running status set
             }
-            i++;  // Skip unrecognized byte
+            // If we reach here with a data byte during sysex collection
+            if (gSysexFlag && !(message[i] & 0x80)) {
+                // Add data byte to sysex collection
+                // gSysexData.push_back(message[i]);
+                i++;
+            } else {
+                // Handle data byte outside of a valid context by treating it as system common message
+                chan = 0;
+                i += midiProcessSystemPacket(message, i, chan);
+            }
             break;
         }
     }
@@ -903,13 +983,6 @@ static void midiDebug_(Thread& th, Prim* prim)
 {
     gMidiDebug = th.popFloat("midiDebug : onoff") != 0.;
 }
-
-const Z kOneOver127 = 1./127.;
-const Z kOneOver8191 = 1./8191.;
-
-// The rest of the MIDI functions remain the same as in the CoreMIDI implementation
-// Implementing the needed callback functions for RtMidi
-// TODO: left off here
 
 #endif // SAPF_COREMIDI
 
