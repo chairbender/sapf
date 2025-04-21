@@ -14,14 +14,12 @@ const int kMaxMidiPorts = 16;
 // stateful midi client with associated input and output ports that
 // can be connected
 class PortableMidiClient {
-    // TODO: implement cross platform client
 public:
 #ifdef SAPF_COREMIDI
     PortableMidiClient(int numIn, int numOut, MIDIReadProc midiReadProc, MIDINotifyProc midiNotifyProc);
 #else
     PortableMidiClient(int numIn, int numOut, RtMidiIn::RtMidiCallback midiCallback);
 #endif
-    // TODO: teardown
     ~PortableMidiClient();
 
     [[nodiscard]] int numMidiInPorts() const;
@@ -34,8 +32,6 @@ public:
     // print the list of midi endpoints to stdout
     static void printMIDIEndpoints();
 private:
-    // TODO: are the outputs even ever actually used? Let's remove them if not. Check in upstream first.
-    // TODO: Can these actually be declared const?
     #ifdef SAPF_COREMIDI
         int mNumMidiInPorts;
         int mNumMidiOutPorts;

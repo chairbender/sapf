@@ -273,6 +273,37 @@ static void midiNotifyProc(const MIDINotification *message, void *refCon)
 	printf("midi notification %d %d\n", (int)message->messageID, (int)message->messageSize);
 }
 
+// TODO: ATTOW midi output is not actually used even in upstream, so the below 3 functions
+//  are never called and are also not ported to RtMidi, but kept as reference if we want
+//  to add those operations later
+static struct mach_timebase_info machTimebaseInfo() {
+	struct mach_timebase_info info;
+	mach_timebase_info(&info);
+	return info;
+}
+
+static MIDITimeStamp midiTime(float latencySeconds)
+{
+	// add the latency expressed in seconds, to the current host time base.
+	static struct mach_timebase_info info = machTimebaseInfo(); // cache the timebase info.
+	Float64 latencyNanos = 1000000000 * latencySeconds;
+	MIDITimeStamp latencyMIDI = (latencyNanos / (Float64)info.numer) * (Float64)info.denom;
+	return (MIDITimeStamp)mach_absolute_time() + latencyMIDI;
+}
+
+// void sendmidi(int port, MIDIEndpointRef dest, int length, int hiStatus, int loStatus, int aval, int bval, float late)
+// {
+// 	MIDIPacketList mpktlist;
+// 	MIDIPacketList * pktlist = &mpktlist;
+// 	MIDIPacket * pk = MIDIPacketListInit(pktlist);
+// 	ByteCount nData = (ByteCount) length;
+// 	pk->data[0] = (Byte) (hiStatus & 0xF0) | (loStatus & 0x0F);
+// 	pk->data[1] = (Byte) aval;
+// 	pk->data[2] = (Byte) bval;
+// 	pk = MIDIPacketListAdd(pktlist, sizeof(struct MIDIPacketList) , pk, midiTime(late), nData, pk->data);
+// 	/*OSStatus error =*/ MIDISend(gMIDIOutPort[port],  dest, pktlist );
+// }
+
 static void midiDebug_(Thread& th, Prim* prim)
 {
     gMidiDebug = th.popFloat("midiDebug : onoff") != 0.;
