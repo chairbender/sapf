@@ -237,105 +237,9 @@ static void midiProcessPacket(const PortableMidiPacket& pkt, const int srcIndex)
 // TODO: more of below can be refactored into an abstraction to reduce duplication
 //  between macOS / not
 #ifdef SAPF_COREMIDI
-MIDIPortRef gMIDIInPort[kMaxMidiPorts], gMIDIOutPort[kMaxMidiPorts];
-
+// TODO: still needed?
 static int midiProcessSystemPacket(MIDIPacket *pkt, int chan) {
 	return midiProcessSystemPacket(PortableMidiPacket{pkt}, chan)
-}
-
-static void midiProcessPacket(MIDIPacket *pkt, int srcIndex)
-{
-	if(pkt) {
-		int i = 0; 
-		while (i < pkt->length) {
-			uint8_t status = pkt->data[i] & 0xF0;
-			uint8_t chan = pkt->data[i] & 0x0F;
-			uint8_t a, b;
-
-			if(status & 0x80) // set the running status for voice messages
-				gRunningStatus = ((status >> 4) == 0xF) ? 0 : pkt->data[i]; // keep also additional info
-		L:
-			switch (status) {
-			case 0x80 : //noteOff
-				a = pkt->data[i+1];
-				b = pkt->data[i+2];
-				if (gMidiDebug) printf("midi note off %d %d %d %d\n", srcIndex, chan+1, a, b);
-				gMidiState[srcIndex][chan].keyvel[a] = 0;
-				--gMidiState[srcIndex][chan].numKeysDown;
-				i += 3;
-				break;
-			case 0x90 : //noteOn
-				a = pkt->data[i+1];
-				b = pkt->data[i+2];
-				if (gMidiDebug) printf("midi note on %d %d %d %d\n", srcIndex, chan+1, a, b);
-				if (b) {
-					gMidiState[srcIndex][chan].lastkey = a;
-					gMidiState[srcIndex][chan].lastvel = b;
-					++gMidiState[srcIndex][chan].numKeysDown;
-				} else {
-					--gMidiState[srcIndex][chan].numKeysDown;
-				}
-				gMidiState[srcIndex][chan].keyvel[a] = b;
-				i += 3;
-				break;
-			case 0xA0 : //polytouch
-				a = pkt->data[i+1];
-				b = pkt->data[i+2];
-				if (gMidiDebug) printf("midi poly %d %d %d %d\n", srcIndex, chan+1, a, b);
-				gMidiState[srcIndex][chan].polytouch[a] = b;
-				i += 3;
-				break;
-			case 0xB0 : //control
-				a = pkt->data[i+1];
-				b = pkt->data[i+2];
-				if (gMidiDebug) printf("midi control %d %d %d %d\n", srcIndex, chan+1, a, b);
-				gMidiState[srcIndex][chan].control[a] = b;
-				if (a == 120 || (a >= 123 && a <= 127)) {
-					// all notes off
-					memset(gMidiState[srcIndex][chan].keyvel, 0, 128);
-					gMidiState[srcIndex][chan].numKeysDown = 0;
-				} else if (a == 121) {
-					// reset ALL controls to zero, don't follow MMA recommended practices.
-					memset(gMidiState[srcIndex][chan].control, 0, 128);
-					gMidiState[srcIndex][chan].bend = 0x4000;
-				}
-				i += 3;
-				break;
-			case 0xC0 : //program
-				a = pkt->data[i+1];
-				gMidiState[srcIndex][chan].program = a;
-				if (gMidiDebug) printf("midi program %d %d %d\n", srcIndex, chan+1, a);
-				i += 2;
-				break;
-			case 0xD0 : //touch
-				a = pkt->data[i+1];
-				printf("midi touch %d %d\n", chan+1, a);
-				gMidiState[srcIndex][chan].touch = a;
-				i += 2;
-				break;
-			case 0xE0 : //bend
-				a = pkt->data[i+1];
-				b = pkt->data[i+2];
-				if (gMidiDebug) printf("midi bend %d %d %d %d\n", srcIndex, chan+1, a, b);
-				gMidiState[srcIndex][chan].bend = ((b << 7) | a) - 8192;
-				i += 3;
-				break;
-			case 0xF0 :
-				i += midiProcessSystemPacket(pkt, chan);
-				break;
-			default :	// data byte => continuing sysex message
-				if(gRunningStatus && !gSysexFlag) { // modified cp: handling running status. may be we should here
-					status = gRunningStatus & 0xF0; // accept running status only inside a packet beginning
-					chan = gRunningStatus & 0x0F;	// with a valid status byte ?
-					--i;
-					goto L; // parse again with running status set
-				}
-				chan = 0;
-				i += midiProcessSystemPacket(pkt, chan);
-				break;
-			}
-		}
-	}
 }
 
 static void midiReadProc(const MIDIPacketList *pktlist, void* readProcRefCon, void* srcConnRefCon)
@@ -366,20 +270,6 @@ static MIDITimeStamp midiTime(float latencySeconds)
     Float64 latencyNanos = 1000000000 * latencySeconds;
     MIDITimeStamp latencyMIDI = (latencyNanos / (Float64)info.numer) * (Float64)info.denom;
     return (MIDITimeStamp)mach_absolute_time() + latencyMIDI;
-}
-
-void sendmidi(int port, MIDIEndpointRef dest, int length, int hiStatus, int loStatus, int aval, int bval, float late);
-void sendmidi(int port, MIDIEndpointRef dest, int length, int hiStatus, int loStatus, int aval, int bval, float late)
-{
-	MIDIPacketList mpktlist;
-	MIDIPacketList * pktlist = &mpktlist;
-	MIDIPacket * pk = MIDIPacketListInit(pktlist);
-	ByteCount nData = (ByteCount) length;
-	pk->data[0] = (uint8_t) (hiStatus & 0xF0) | (loStatus & 0x0F);
-	pk->data[1] = (uint8_t) aval;
-	pk->data[2] = (uint8_t) bval;
-	pk = MIDIPacketListAdd(pktlist, sizeof(struct MIDIPacketList) , pk, midiTime(late), nData, pk->data);
-	/*OSStatus error =*/ MIDISend(gMIDIOutPort[port],  dest, pktlist );
 }
 
 static int prListMIDIEndpoints()
@@ -637,15 +527,14 @@ static void midiProcessPacket(const std::vector<unsigned char>& message, int src
 static void midiCallback(double timeStamp, std::vector<unsigned char>* message, void* userData)
 {
     if (!message || message->empty()) return;
-    
     // userData contains the port index
     size_t srcIndex = reinterpret_cast<size_t>(userData);
-    midiProcessPacket(*message, srcIndex);
+    midiProcessPacket(PortableMidiPacket{*message}, srcIndex);
 }
 
 static int prConnectMIDIIn(int uid, int inputIndex)
 {
-    if (inputIndex < 0 || inputIndex >= gMidiClient->mNumMIDIInPorts) return errOutOfRange;
+    if (inputIndex < 0 || inputIndex >= gMidiClient->numMidiInPorts()) return errOutOfRange;
     
     try {
         RtMidiIn* midiIn = gMIDIInPorts[inputIndex];
@@ -671,7 +560,7 @@ static int prConnectMIDIIn(int uid, int inputIndex)
 
 static int prDisconnectMIDIIn(int uid, int inputIndex)
 {
-    if (inputIndex < 0 || inputIndex >= gMidiClient->mNumMIDIInPorts) return errOutOfRange;
+    if (inputIndex < 0 || inputIndex >= gMidiClient->numMidiInPorts()) return errOutOfRange;
     
     try {
         RtMidiIn* midiIn = gMIDIInPorts[inputIndex];
@@ -685,35 +574,6 @@ static int prDisconnectMIDIIn(int uid, int inputIndex)
     } catch (RtMidiError &error) {
         fprintf(stderr, "Error disconnecting MIDI input: %s\n", error.getMessage().c_str());
         return errFailed;
-    }
-}
-
-void sendmidi(int port, int dest, int length, int hiStatus, int loStatus, int aval, int bval, float late)
-{
-    if (port < 0 || port >= gNumMIDIOutPorts || !gMIDIOutPorts[port]) return;
-    
-    try {
-        // Ensure the port is open
-        RtMidiOut* midiOut = gMIDIOutPorts[port];
-        
-        // If not connected already, connect to the specified destination
-        if (!midiOut->isPortOpen() && dest >= 0 && dest < midiOut->getPortCount()) {
-            midiOut->openPort(dest);
-        }
-        
-        if (!midiOut->isPortOpen()) return;
-        
-        // Prepare the MIDI message
-        std::vector<unsigned char> message;
-        message.push_back((unsigned char)((hiStatus & 0xF0) | (loStatus & 0x0F)));
-        
-        if (length > 1) message.push_back((unsigned char)aval);
-        if (length > 2) message.push_back((unsigned char)bval);
-        
-        // Send the message
-        midiOut->sendMessage(&message);
-    } catch (RtMidiError &error) {
-        fprintf(stderr, "Error sending MIDI: %s\n", error.getMessage().c_str());
     }
 }
 
