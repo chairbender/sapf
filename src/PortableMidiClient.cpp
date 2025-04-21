@@ -195,6 +195,7 @@ PortableMidiClient::PortableMidiClient(const int numIn, const int numOut, const 
             	auto midiIn = std::make_unique<RtMidiIn>();
                 midiIn->setCallback(midiCallback, reinterpret_cast<void*>(i));
                 midiIn->ignoreTypes(false, false, false); // Don't ignore sysex, timing, or active sensing
+            	mMIDIInPorts.push_back(std::move(midiIn));
             } catch (RtMidiError &error) {
                 fprintf(stderr, "Error creating MIDI input port %d: %s\n", i, error.getMessage().c_str());
             }
