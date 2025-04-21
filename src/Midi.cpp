@@ -333,7 +333,7 @@ static int midiInit(int numIn, int numOut)
 	numOut = std::clamp(numOut, 1, kMaxMidiPorts);
 
 	#ifdef SAPF_COREMIDI
-		client = std::make_unique<PortableMidiClient>(numIn, numOut, midiReadProc, midiNotifyProc);
+		gMidiClient = std::make_unique<PortableMidiClient>(numIn, numOut, midiReadProc, midiNotifyProc);
 	#else
 		gMidiClient = std::make_unique<PortableMidiClient>(numIn, numOut, &midiCallback);
 	#endif
