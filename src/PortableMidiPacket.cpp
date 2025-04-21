@@ -8,7 +8,7 @@ const uint8_t* PortableMidiPacket::bytes() const {
     return (uint8_t*)this->mMidiPacket->data;
 }
 
-const int PortableMidiPacket::length() const {
+int PortableMidiPacket::length() const {
     return this->mMidiPacket->length;
 }
 #else
