@@ -163,7 +163,7 @@ void PortableMidiClient::prListMIDIEndpoints() {
 	return errNone; 
 }
 
-void PortableMidiClient::connectInputPort(int uid, int inputIndex) {
+void PortableMidiClient::connectInputPort(const int uid, const int inputIndex) const {
 	if (inputIndex < 0 || inputIndex >= mNumMidiInPorts) return errOutOfRange;
 
 	MIDIEndpointRef src=0;
@@ -176,6 +176,16 @@ void PortableMidiClient::connectInputPort(int uid, int inputIndex) {
 	MIDIPortConnectSource(mMIDIInPort[inputIndex], src, p);
 }
 
+void PortableMidiClient::disconnectInputPort(const int uid, const int inputIndex) const {
+	if (inputIndex < 0 || inputIndex >= mNumMidiInPorts) return;
+
+	MIDIEndpointRef src=0;
+	MIDIObjectType mtype;
+	MIDIObjectFindByUniqueID(uid, (MIDIObjectRef*)&src, &mtype);
+	if (mtype != kMIDIObjectType_Source) return;
+
+	MIDIPortDisconnectSource(mMIDIInPort[inputIndex], src);
+}
 #else
 PortableMidiClient::PortableMidiClient(const int numIn, const int numOut, const RtMidiIn::RtMidiCallback midiCallback) {
     try {
@@ -242,6 +252,22 @@ void PortableMidiClient::connectInputPort(const int uid, const int inputIndex) c
 		}
 	} catch (RtMidiError &error) {
 		fprintf(stderr, "Error connecting MIDI input: %s\n", error.getMessage().c_str());
+	}
+}
+
+// TODO: UID not used for RtMidi - remove param everywhere
+void PortableMidiClient::disconnectInputPort(const int uid, const int inputIndex) const {
+	if (inputIndex < 0 || inputIndex >= mMIDIInPorts.size()) return;
+
+	try {
+		if (!mMIDIInPorts[inputIndex]) return;
+
+		// Close the port
+		if (mMIDIInPorts[inputIndex]->isPortOpen()) {
+			mMIDIInPorts[inputIndex]->closePort();
+		}
+	} catch (RtMidiError &error) {
+		fprintf(stderr, "Error disconnecting MIDI input: %s\n", error.getMessage().c_str());
 	}
 }
 

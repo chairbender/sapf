@@ -29,12 +29,12 @@ public:
 
     // connect the specified MIDI input endpoint to this client's input port
     void connectInputPort(int uid, int inputIndex) const;
-    void disconnectInputPort(int uid, int inputIndex);
+    void disconnectInputPort(int uid, int inputIndex) const;
 
     // print the list of midi endpoints to stdout
     static void printMIDIEndpoints();
 private:
-    // TODO: are the outputs even ever actually used? Let's remove them if not
+    // TODO: are the outputs even ever actually used? Let's remove them if not. Check in upstream first.
     // TODO: Can these actually be declared const?
     #ifdef SAPF_COREMIDI
         int mNumMidiInPorts;

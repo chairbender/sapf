@@ -238,6 +238,18 @@ void prConnectMIDIIn(const int uid, const int inputIndex) {
 	gMidiClient->connectInputPort(uid, inputIndex);
 }
 
+void prDisconnectMIDIIn(const int uid, const int inputIndex) {
+	gMidiClient->disconnectInputPort(uid, inputIndex);
+}
+
+static void midiDisconnectInput_(Thread& th, Prim* prim)
+{
+	int index = (int)th.popInt("midiDisconnectInput : port");
+	int uid = (int)th.popInt("midiDisconnectInput : sourceUID");
+	prDisconnectMIDIIn(uid, index);
+}
+
+
 static void midiConnectInput_(Thread& th, Prim* prim)
 {
 	int index = (int)th.popInt("midiConnectInput : port");
@@ -259,27 +271,6 @@ static void midiReadProc(const MIDIPacketList *pktlist, void* readProcRefCon, vo
 static void midiNotifyProc(const MIDINotification *message, void *refCon)
 {
 	printf("midi notification %d %d\n", (int)message->messageID, (int)message->messageSize);
-}
-
-static int prDisconnectMIDIIn(int uid, int inputIndex)
-{
-	if (inputIndex < 0 || inputIndex >= client->mNumMIDIInPorts) return errOutOfRange;
-
-	MIDIEndpointRef src=0;
-	MIDIObjectType mtype;
-	MIDIObjectFindByUniqueID(uid, (MIDIObjectRef*)&src, &mtype);
-	if (mtype != kMIDIObjectType_Source) return errFailed;
-
-	MIDIPortDisconnectSource(gMIDIInPort[inputIndex], src);
-
-	return errNone;
-}
-
-static void midiDisconnectInput_(Thread& th, Prim* prim)
-{
-	int index = (int)th.popInt("midiDisconnectInput : port");
-	int uid = (int)th.popInt("midiDisconnectInput : sourceUID");
-	prDisconnectMIDIIn(uid, index);
 }
 
 static void midiDebug_(Thread& th, Prim* prim)
@@ -409,32 +400,6 @@ static void midiCallback(double timeStamp, std::vector<unsigned char>* message, 
     // userData contains the port index
     size_t srcIndex = reinterpret_cast<size_t>(userData);
     midiProcessPacket(PortableMidiPacket{*message}, srcIndex);
-}
-
-static int prDisconnectMIDIIn(int uid, int inputIndex)
-{
-    if (inputIndex < 0 || inputIndex >= gMidiClient->numMidiInPorts()) return errOutOfRange;
-    
-    try {
-        RtMidiIn* midiIn = gMIDIInPorts[inputIndex];
-        if (!midiIn) return errFailed;
-        
-        // Close the port
-        if (midiIn->isPortOpen()) {
-            midiIn->closePort();
-        }
-        return errNone;
-    } catch (RtMidiError &error) {
-        fprintf(stderr, "Error disconnecting MIDI input: %s\n", error.getMessage().c_str());
-        return errFailed;
-    }
-}
-
-static void midiDisconnectInput_(Thread& th, Prim* prim)
-{
-    int index = (int)th.popInt("midiDisconnectInput : port");
-    int uid = (int)th.popInt("midiDisconnectInput : sourceUID");
-    prDisconnectMIDIIn(uid, index);
 }
 
 static void midiDebug_(Thread& th, Prim* prim)
