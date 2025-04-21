@@ -162,6 +162,20 @@ void PortableMidiClient::prListMIDIEndpoints() {
 	}
 	return errNone; 
 }
+
+void PortableMidiClient::connectInputPort(int uid, int inputIndex) {
+	if (inputIndex < 0 || inputIndex >= mNumMidiInPorts) return errOutOfRange;
+
+	MIDIEndpointRef src=0;
+	MIDIObjectType mtype;
+	MIDIObjectFindByUniqueID(uid, (MIDIObjectRef*)&src, &mtype);
+	if (mtype != kMIDIObjectType_Source) return;
+
+	//pass the uid to the midiReadProc to identify the src
+	void* p = (void*)(uintptr_t)inputIndex;
+	MIDIPortConnectSource(mMIDIInPort[inputIndex], src, p);
+}
+
 #else
 PortableMidiClient::PortableMidiClient(const int numIn, const int numOut, const RtMidiIn::RtMidiCallback midiCallback) {
     try {
@@ -211,7 +225,27 @@ int PortableMidiClient::numMidiOutPorts() const {
 	return mMIDIOutPorts.size();
 }
 
-void PortableMidiClient::prListMIDIEndpoints() {
+void PortableMidiClient::connectInputPort(const int uid, const int inputIndex) const {
+	if (inputIndex < 0 || inputIndex >= mMIDIInPorts.size()) return;
+
+	try {
+		if (!mMIDIInPorts[inputIndex]) return;
+
+		// Close any existing connection
+		if (mMIDIInPorts[inputIndex]->isPortOpen()) {
+			mMIDIInPorts[inputIndex]->closePort();
+		}
+
+		// Connect to the specified port by UID (which is port number in RtMidi)
+		if (uid >= 0 && uid < mMIDIInPorts[inputIndex]->getPortCount()) {
+			mMIDIInPorts[inputIndex]->openPort(uid);
+		}
+	} catch (RtMidiError &error) {
+		fprintf(stderr, "Error connecting MIDI input: %s\n", error.getMessage().c_str());
+	}
+}
+
+void PortableMidiClient::printMIDIEndpoints() {
 	try {
 		RtMidiIn* midiin = new RtMidiIn();
 		RtMidiOut* midiout = new RtMidiOut();

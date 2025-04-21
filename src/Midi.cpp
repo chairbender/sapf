@@ -234,14 +234,18 @@ static void midiProcessPacket(const PortableMidiPacket& pkt, const int srcIndex)
 	}
 }
 
-// TODO: more of below can be refactored into an abstraction to reduce duplication
-//  between macOS / not
-#ifdef SAPF_COREMIDI
-// TODO: still needed?
-static int midiProcessSystemPacket(MIDIPacket *pkt, int chan) {
-	return midiProcessSystemPacket(PortableMidiPacket{pkt}, chan)
+void prConnectMIDIIn(const int uid, const int inputIndex) {
+	gMidiClient->connectInputPort(uid, inputIndex);
 }
 
+static void midiConnectInput_(Thread& th, Prim* prim)
+{
+	int index = (int)th.popInt("midiConnectInput : port");
+	int uid = (int)th.popInt("midiConnectInput : sourceUID");
+	prConnectMIDIIn(uid, index);
+}
+
+#ifdef SAPF_COREMIDI
 static void midiReadProc(const MIDIPacketList *pktlist, void* readProcRefCon, void* srcConnRefCon)
 {
 	MIDIPacket *pkt = (MIDIPacket*)pktlist->packet;
@@ -257,118 +261,6 @@ static void midiNotifyProc(const MIDINotification *message, void *refCon)
 	printf("midi notification %d %d\n", (int)message->messageID, (int)message->messageSize);
 }
 
-static struct mach_timebase_info machTimebaseInfo() {
-    struct mach_timebase_info info;
-    mach_timebase_info(&info);
-    return info;
-}
-
-static MIDITimeStamp midiTime(float latencySeconds)
-{
-    // add the latency expressed in seconds, to the current host time base.
-    static struct mach_timebase_info info = machTimebaseInfo(); // cache the timebase info.
-    Float64 latencyNanos = 1000000000 * latencySeconds;
-    MIDITimeStamp latencyMIDI = (latencyNanos / (Float64)info.numer) * (Float64)info.denom;
-    return (MIDITimeStamp)mach_absolute_time() + latencyMIDI;
-}
-
-static int prListMIDIEndpoints()
-{
-	OSStatus error;
-	int numSrc = (int)MIDIGetNumberOfSources();
-	int numDst = (int)MIDIGetNumberOfDestinations();
-
-	printf("midi sources %d destinations %d\n", (int)numSrc, (int)numDst);
-
-	for (int i=0; i<numSrc; ++i) {
-		MIDIEndpointRef src = MIDIGetSource(i);
-		SInt32 uid = 0;
-		MIDIObjectGetIntegerProperty(src, kMIDIPropertyUniqueID, &uid);
-
-		MIDIEntityRef ent;
-		error = MIDIEndpointGetEntity(src, &ent);
-
-		CFStringRef devname, endname;
-		char cendname[1024], cdevname[1024];
-
-		// Virtual sources don't have entities
-		if(error)
-		{
-			MIDIObjectGetStringProperty(src, kMIDIPropertyName, &devname);
-			MIDIObjectGetStringProperty(src, kMIDIPropertyName, &endname);
-			CFStringGetCString(devname, cdevname, 1024, kCFStringEncodingUTF8);
-			CFStringGetCString(endname, cendname, 1024, kCFStringEncodingUTF8);
-		}
-		else
-		{
-			MIDIDeviceRef dev;
-
-			MIDIEntityGetDevice(ent, &dev);
-			MIDIObjectGetStringProperty(dev, kMIDIPropertyName, &devname);
-			MIDIObjectGetStringProperty(src, kMIDIPropertyName, &endname);
-			CFStringGetCString(devname, cdevname, 1024, kCFStringEncodingUTF8);
-			CFStringGetCString(endname, cendname, 1024, kCFStringEncodingUTF8);
-		}
-		
-		printf("MIDI Source %2d '%s', '%s' UID: %d\n", i, cdevname, cendname, uid);
-	}
-
-
-
-	for (int i=0; i<numDst; ++i) {
-		MIDIEndpointRef dst = MIDIGetDestination(i);
-		SInt32 uid = 0;
-		MIDIObjectGetIntegerProperty(dst, kMIDIPropertyUniqueID, &uid);
-
-		MIDIEntityRef ent;
-		error = MIDIEndpointGetEntity(dst, &ent);
-
-		CFStringRef devname, endname;
-		char cendname[1024], cdevname[1024];
-
-		// Virtual destinations don't have entities either
-		if(error)
-		{
-			MIDIObjectGetStringProperty(dst, kMIDIPropertyName, &devname);
-			MIDIObjectGetStringProperty(dst, kMIDIPropertyName, &endname);
-			CFStringGetCString(devname, cdevname, 1024, kCFStringEncodingUTF8);
-			CFStringGetCString(endname, cendname, 1024, kCFStringEncodingUTF8);
-
-		}
-		else
-		{
-			MIDIDeviceRef dev;
-
-			MIDIEntityGetDevice(ent, &dev);
-			MIDIObjectGetStringProperty(dev, kMIDIPropertyName, &devname);
-			MIDIObjectGetStringProperty(dst, kMIDIPropertyName, &endname);
-			CFStringGetCString(devname, cdevname, 1024, kCFStringEncodingUTF8);
-			CFStringGetCString(endname, cendname, 1024, kCFStringEncodingUTF8);
-		}
-		printf("MIDI Destination %2d '%s', '%s' UID: %d\n", i, cdevname, cendname, uid);
-	}
-	return errNone;
-}
-
-
-
-static int prConnectMIDIIn(int uid, int inputIndex)
-{
-	if (inputIndex < 0 || inputIndex >= client->mNumMIDIInPorts) return errOutOfRange;
-
-	MIDIEndpointRef src=0;
-	MIDIObjectType mtype;
-	MIDIObjectFindByUniqueID(uid, (MIDIObjectRef*)&src, &mtype);
-	if (mtype != kMIDIObjectType_Source) return errFailed;
-
-	//pass the uid to the midiReadProc to identify the src
-	void* p = (void*)(uintptr_t)inputIndex;
-	MIDIPortConnectSource(gMIDIInPort[inputIndex], src, p);
-
-	return errNone;
-}
-
-
 static int prDisconnectMIDIIn(int uid, int inputIndex)
 {
 	if (inputIndex < 0 || inputIndex >= client->mNumMIDIInPorts) return errOutOfRange;
@@ -383,13 +275,6 @@ static int prDisconnectMIDIIn(int uid, int inputIndex)
 	return errNone;
 }
 
-static void midiConnectInput_(Thread& th, Prim* prim)
-{
-	int index = (int)th.popInt("midiConnectInput : port");
-	int uid = (int)th.popInt("midiConnectInput : sourceUID");
-	prConnectMIDIIn(uid, index);
-}
-
 static void midiDisconnectInput_(Thread& th, Prim* prim)
 {
 	int index = (int)th.popInt("midiDisconnectInput : port");
@@ -402,12 +287,6 @@ static void midiDebug_(Thread& th, Prim* prim)
     gMidiDebug = th.popFloat("midiDebug : onoff") != 0.;
 }
 #else
-// RtMidi-based implementation
-// TODO: dedupe this stuff - lots of dupe with coremidi
-
-std::vector<RtMidiIn*> gMIDIInPorts;
-std::vector<RtMidiOut*> gMIDIOutPorts;
-
 static int midiProcessSystemPacket(const std::vector<unsigned char>& message, int startIdx, int chan)
 {
     if (startIdx >= message.size()) return 0;
@@ -532,32 +411,6 @@ static void midiCallback(double timeStamp, std::vector<unsigned char>* message, 
     midiProcessPacket(PortableMidiPacket{*message}, srcIndex);
 }
 
-static int prConnectMIDIIn(int uid, int inputIndex)
-{
-    if (inputIndex < 0 || inputIndex >= gMidiClient->numMidiInPorts()) return errOutOfRange;
-    
-    try {
-        RtMidiIn* midiIn = gMIDIInPorts[inputIndex];
-        if (!midiIn) return errFailed;
-        
-        // Close any existing connection
-        if (midiIn->isPortOpen()) {
-            midiIn->closePort();
-        }
-        
-        // Connect to the specified port by UID (which is port number in RtMidi)
-        if (uid >= 0 && uid < midiIn->getPortCount()) {
-            midiIn->openPort(uid);
-            return errNone;
-        } else {
-            return errOutOfRange;
-        }
-    } catch (RtMidiError &error) {
-        fprintf(stderr, "Error connecting MIDI input: %s\n", error.getMessage().c_str());
-        return errFailed;
-    }
-}
-
 static int prDisconnectMIDIIn(int uid, int inputIndex)
 {
     if (inputIndex < 0 || inputIndex >= gMidiClient->numMidiInPorts()) return errOutOfRange;
@@ -575,13 +428,6 @@ static int prDisconnectMIDIIn(int uid, int inputIndex)
         fprintf(stderr, "Error disconnecting MIDI input: %s\n", error.getMessage().c_str());
         return errFailed;
     }
-}
-
-static void midiConnectInput_(Thread& th, Prim* prim)
-{
-    int index = (int)th.popInt("midiConnectInput : port");
-    int uid = (int)th.popInt("midiConnectInput : sourceUID");
-    prConnectMIDIIn(uid, index);
 }
 
 static void midiDisconnectInput_(Thread& th, Prim* prim)
@@ -612,7 +458,7 @@ static int midiInit(int numIn, int numOut)
 		gMidiClient = std::make_unique<PortableMidiClient>(numIn, numOut, &midiCallback);
 	#endif
 
-	PortableMidiClient::prListMIDIEndpoints();
+	PortableMidiClient::printMIDIEndpoints();
 	
 	return errNone;
 }
@@ -635,7 +481,7 @@ static void midiStop_(Thread& th, Prim* prim)
 
 static void midiList_(Thread& th, Prim* prim)
 {
-	PortableMidiClient::prListMIDIEndpoints();
+	PortableMidiClient::printMIDIEndpoints();
 }
 
 
