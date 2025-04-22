@@ -2,7 +2,7 @@ name: Compile
 
 on:
   push:
-    branches: [ "main" ]
+    branches: [ "main", "osx-native-porting-cb-test" ]
   pull_request:
     branches: [ "main" ]
     
