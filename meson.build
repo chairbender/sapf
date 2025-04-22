@@ -93,7 +93,7 @@ if get_option('carbon')
 endif
 
 if get_option('cocoa')
-  add_project_arguments('-DSAPF_COCOA', '-std=c++17', language: ['cpp', 'objcpp'])
+  add_project_arguments('-DSAPF_COCOA', language: ['cpp', 'objcpp'])
   sources += ['src/makeImage.mm']
   add_languages('objcpp', required : true)
   link_args += ['-framework', 'Cocoa']
