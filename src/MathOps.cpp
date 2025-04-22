@@ -705,7 +705,7 @@ static void DoIReduce(Thread& th, BinaryOp* op)
 	BinaryOp* gBinaryOpPtr_##NAME = &gBinaryOp_##NAME; \
 	BINARY_OP_PRIM(NAME)
 
-	
+
 #endif // SAPF_ACCELERATE
 
 #define DEFINE_BINOP_INT(NAME, CODE) \
