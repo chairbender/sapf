@@ -272,17 +272,6 @@ extern BinaryOp* gBinaryOpPtr_min;
 extern BinaryOp* gBinaryOpPtr_max;
 extern BinaryOp* gBinaryOpPtr_hypot;
 
-void check_binop_loopz(BinaryOp& op, const array<Z, 3> a, int astride, const array<Z, 3> b, int bstride) {
-	double out[3];
-	double expected[3] = {op.op(a[0], b[0]), op.op(a[1], b[1]), op.op(a[2], b[2])};
-	op.loopz(3, a.data(), 1, b.data(), 1, out);
-	CHECK_ARR(expected, out, 3);
-}
-
-void check_binop_loopz(BinaryOp& op, int astride, int bstride) {
-	check_binop_loopz(op, {1, 2, 3}, astride, {4, 5, 6}, bstride);
-}
-
 #define CHECK_IDENTITY_BINOP(op) \
 	do { \
 		SUBCASE(#op) { \
