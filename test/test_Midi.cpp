@@ -14,7 +14,7 @@ void resetMidiState()
 #ifdef SAPF_COREMIDI
 static MIDIPacket packet;
 #else
-static std::vector<byte> packet;
+static std::vector<unsigned char> packet;
 #endif
 
 PortableMidiPacket midiPacket(std::initializer_list<unsigned char> bytes)
