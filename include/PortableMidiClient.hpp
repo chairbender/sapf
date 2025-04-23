@@ -2,6 +2,7 @@
 
 #ifdef SAPF_COREMIDI
     #include <CoreMidi/CoreMidi.h>
+    #include "object.hpp"
 #else
     #include <vector>
     #include "RtMidi.h"
@@ -36,7 +37,7 @@ private:
         int mNumMidiInPorts;
         int mNumMidiOutPorts;
         MIDIClientRef mMIDIClient;
-        MIDIPortRef mMIDIInPgort[kMaxMidiPorts], mMIDIOutPort[kMaxMidiPorts];
+        MIDIPortRef mMIDIInPort[kMaxMidiPorts], mMIDIOutPort[kMaxMidiPorts];
     #else
         std::vector<std::unique_ptr<RtMidiIn>> mMIDIInPorts;
         std::vector<std::unique_ptr<RtMidiOut>> mMIDIOutPorts;

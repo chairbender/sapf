@@ -17,7 +17,7 @@ PortableMidiClient::PortableMidiClient(const int numIn, const int numOut, const 
         });
         printf("mMIDIClient %d\n", (int)mMIDIClient);
         if (err2) {
-            fprintf(stderr, "Could not create MIDI client. error %d\n", err);
+            fprintf(stderr, "Could not create MIDI client. error %d\n", err2);
             return;
         }
     }
@@ -28,15 +28,15 @@ PortableMidiClient::PortableMidiClient(const int numIn, const int numOut, const 
         CFStringRef inputPortName = CFStringCreateWithCString(alloc, str, enc);
         CFReleaser inputPortNameReleaser(inputPortName);
 
-        err = MIDIInputPortCreate(mMIDIClient, inputPortName, midiReadProc, &i, mMIDIInPort+i);
+        const auto err = MIDIInputPortCreate(mMIDIClient, inputPortName, midiReadProc, &i, mMIDIInPort+i);
         if (err) {
-            mNumMIDIInPorts = i;
+            mNumMidiInPorts = i;
             fprintf(stderr, "Could not create MIDI port %s. error %d\n", str, err);
-            return errFailed;
+            return;
         }
     }
 
-    mNumMIDIInPorts = numIn;
+    mNumMidiInPorts = numIn;
 
     for (int i=0; i<numOut; ++i) {
         char str[32];
@@ -44,14 +44,13 @@ PortableMidiClient::PortableMidiClient(const int numIn, const int numOut, const 
         CFStringRef outputPortName = CFStringCreateWithCString(alloc, str, enc);
         CFReleaser outputPortNameReleaser(outputPortName);
 
-        err = MIDIOutputPortCreate(mMIDIClient, outputPortName, mMIDIOutPort+i);
+        const auto err = MIDIOutputPortCreate(mMIDIClient, outputPortName, mMIDIOutPort+i);
         if (err) {
-            mNumMIDIOutPorts = i;
+            mNumMidiOutPorts = i;
             fprintf(stderr, "Could not create MIDI out port. error %d\n", err);
-            return errFailed;
         }
     }
-    mNumMIDIOutPorts = numOut;
+    mNumMidiOutPorts = numOut;
 }
 
 PortableMidiClient::~PortableMidiClient() {
@@ -59,13 +58,13 @@ PortableMidiClient::~PortableMidiClient() {
 	* do not catch errors when disposing ports
 	*/
 	int i = 0;
-	for (i=0; i<mNumMIDIOutPorts; ++i) {
+	for (i=0; i<mNumMidiOutPorts; ++i) {
 		if (mMIDIOutPort[i]) {
 			MIDIPortDispose(mMIDIOutPort[i]);
 		}
 	}
 
-	for (i=0; i<mNumMIDIInPorts; ++i) {
+	for (i=0; i<mNumMidiInPorts; ++i) {
 		if (mMIDIInPort[i]) {
 			MIDIPortDispose(mMIDIInPort[i]);
 		}
@@ -86,7 +85,7 @@ int PortableMidiClient::numMidiOutPorts() const {
 	return mNumMidiOutPorts;
 }
 
-void PortableMidiClient::prListMIDIEndpoints() {
+void PortableMidiClient::printMIDIEndpoints() {
     OSStatus error;
 	int numSrc = (int)MIDIGetNumberOfSources();
 	int numDst = (int)MIDIGetNumberOfDestinations();
@@ -160,11 +159,10 @@ void PortableMidiClient::prListMIDIEndpoints() {
 		}
 		printf("MIDI Destination %2d '%s', '%s' UID: %d\n", i, cdevname, cendname, uid);
 	}
-	return errNone; 
 }
 
 void PortableMidiClient::connectInputPort(const int uid, const int inputIndex) const {
-	if (inputIndex < 0 || inputIndex >= mNumMidiInPorts) return errOutOfRange;
+	if (inputIndex < 0 || inputIndex >= mNumMidiInPorts) return;
 
 	MIDIEndpointRef src=0;
 	MIDIObjectType mtype;
