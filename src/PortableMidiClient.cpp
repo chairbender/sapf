@@ -254,7 +254,6 @@ void PortableMidiClient::connectInputPort(const int uid, const int inputIndex) c
 	}
 }
 
-// TODO: UID not used for RtMidi - remove param everywhere
 void PortableMidiClient::disconnectInputPort(const int uid, const int inputIndex) const {
 	if (inputIndex < 0 || inputIndex >= mMIDIInPorts.size()) return;
 
