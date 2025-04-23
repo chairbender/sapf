@@ -243,6 +243,7 @@ test_sources = sources + [
   'test/test_MathOps.cpp',
   'test/test_AsyncAudioFileWriter.cpp',
   'test/test_SndfileSoundFile.cpp',
+  'test/test_Midi.cpp',
 ]
 test_includes = [include_directories('include'), include_directories('test/helpers')]
 test_cpp_args = cpp_args + '-DTEST_BUILD'

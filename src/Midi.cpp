@@ -30,7 +30,11 @@
 	#include <string>
 	#include <RtMidi.h>
 #endif
+#ifdef TEST_BUILD
+#include "Testability.hpp"
+#endif
 
+#ifndef TEST_BUILD
 struct MidiChanState
 {
 	uint8_t control[128];
@@ -43,12 +47,17 @@ struct MidiChanState
 	uint8_t lastkey;
 	uint8_t lastvel;
 };
-
-MidiChanState gMidiState[kMaxMidiPorts][16];
-bool gMidiDebug = false;
-std::vector<uint8_t> gSysexData;
 static uint8_t gRunningStatus;
 static bool gSysexFlag = false;
+#else
+uint8_t gRunningStatus;
+bool gSysexFlag = false;
+#endif
+MidiChanState gMidiState[kMaxMidiPorts][16];
+bool gMidiDebug = false;
+
+
+std::vector<uint8_t> gSysexData;
 
 static std::unique_ptr<PortableMidiClient> gMidiClient;
 
@@ -66,7 +75,10 @@ static void sysexEndInvalid() {
 	gSysexFlag = false;
 }
 
-static int midiProcessSystemPacket(const PortableMidiPacket& pkt, const int chan) {
+#ifndef TEST_BUILD
+static
+#endif
+int midiProcessSystemPacket(const PortableMidiPacket& pkt, const int chan) {
 	int index, data;
 	switch (chan) {
 		case 7: // added cp: Sysex EOX must be taken into account if first on data packet
@@ -141,7 +153,10 @@ static int midiProcessSystemPacket(const PortableMidiPacket& pkt, const int chan
 	return (1);
 }
 
-static void midiProcessPacket(const PortableMidiPacket& pkt, const int srcIndex)
+#ifndef TEST_BUILD
+static
+#endif
+void midiProcessPacket(const PortableMidiPacket& pkt, const int srcIndex)
 {
 	int i = 0;
 	while (i < pkt.length()) {
@@ -275,7 +290,7 @@ static void midiNotifyProc(const MIDINotification *message, void *refCon)
 
 // TODO: ATTOW midi output is not actually used even in upstream, so the below 3 functions
 //  are never called and are also not ported to RtMidi, but kept as reference if we want
-//  to add those operations later
+//  to add those operations later. I think these might be similar to functions in SuperCollider.
 static struct mach_timebase_info machTimebaseInfo() {
 	struct mach_timebase_info info;
 	mach_timebase_info(&info);
