@@ -386,7 +386,6 @@ static void midiRestart_(Thread& th, Prim* prim)
 	MIDIRestart();
 }
 #else
-// TODO: not quite sure what this should do on RtMidi
 static void midiRestart_(Thread& th, Prim* prim)
 {
 	midiStart_(th, prim);

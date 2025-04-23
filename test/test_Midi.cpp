@@ -27,7 +27,7 @@ PortableMidiPacket midiPacket(std::initializer_list<unsigned char> bytes)
     return PortableMidiPacket{&packet};
 #else
     packet = bytes;
-    return PortableMidiPacket{packet}
+    return PortableMidiPacket{packet};
 #endif
 }
 
@@ -83,9 +83,6 @@ void processPitchBend(const int channel, const int lsb, const int msb) {
     processPacket(0xE0, channel, lsb, msb);
 }
 
-
-
-// TODO: these tests need to be audited, might be a lot of duplicate code or pointless stuff here
 TEST_SUITE("MIDI Packet Processing") {
     TEST_CASE("Test Note On/Off processing") {
         resetMidiState();
