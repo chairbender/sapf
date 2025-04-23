@@ -14,17 +14,20 @@
 //    You should have received a copy of the GNU General Public License
 //    along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-#ifndef _Testability_
-#define _Testability_
+#pragma once
+
 
 // this file exposes various internal symbols so they can be unit tested, only
 // for test builds
 #ifdef TEST_BUILD
+#include "UGen.hpp"
+#include "ZArr.hpp"
+#include "PortableMidiPacket.hpp"
+#include "PortableMidiClient.hpp"
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////
 // OscilUgens
-#include "UGen.hpp"
-#include "ZArr.hpp"
+
 struct SinOsc : OneInputUGen<SinOsc>
 {
     Z phase;
@@ -59,6 +62,28 @@ void blackman_(Thread& th, Prim* prim);
     inline void wseg_apply_window(Z* segbuf, ZArr window, int n);
 #endif
 
-#endif
-#endif
+////////////////////////////////////////////////////////////////////////////////////////////////////////
+// Midi
+struct MidiChanState
+{
+    uint8_t control[128];
+    uint8_t polytouch[128];
+    uint8_t keyvel[128];
+    uint32_t numKeysDown;
+    uint16_t bend;
+    uint8_t touch;
+    uint8_t program;
+    uint8_t lastkey;
+    uint8_t lastvel;
+};
 
+// Expose state for testing
+extern MidiChanState gMidiState[kMaxMidiPorts][16];
+extern bool gMidiDebug;
+extern uint8_t gRunningStatus;
+extern bool gSysexFlag;
+
+// Expose functions for testing
+void midiProcessPacket(const PortableMidiPacket& pkt, const int srcIndex);
+int midiProcessSystemPacket(const PortableMidiPacket& pkt, const int chan);
+#endif

@@ -39,6 +39,8 @@ sources = [
   'src/ZArr.cpp',
   'src/Buffers.cpp',
   'src/AsyncAudioFileWriter.cpp',
+  'src/PortableMidiPacket.cpp',
+  'src/PortableMidiClient.cpp',
 ]
 deps = []
 cpp_args = ['-std=c++17']
@@ -133,6 +135,8 @@ endif
 if get_option('coremidi')
   add_project_arguments('-DSAPF_COREMIDI', language: ['cpp', 'objcpp'])
   link_args += ['-framework', 'CoreMIDI']
+else
+  deps += dependency('rtmidi', required: true) 
 endif
 
 if get_option('dispatch')
@@ -239,6 +243,7 @@ test_sources = sources + [
   'test/test_MathOps.cpp',
   'test/test_AsyncAudioFileWriter.cpp',
   'test/test_SndfileSoundFile.cpp',
+  'test/test_Midi.cpp',
 ]
 test_includes = [include_directories('include'), include_directories('test/helpers')]
 test_cpp_args = cpp_args + '-DTEST_BUILD'
