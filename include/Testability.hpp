@@ -86,4 +86,8 @@ extern bool gSysexFlag;
 // Expose functions for testing
 void midiProcessPacket(const PortableMidiPacket& pkt, const int srcIndex);
 int midiProcessSystemPacket(const PortableMidiPacket& pkt, const int chan);
+
+////////////////////////////////////////////////////////////////////////////////////////////////////////
+// Spectrogram
+void spectrogram(int size, const double* data, int width, int log2bins, const char* path, double dBfloor);
 #endif
