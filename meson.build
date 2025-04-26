@@ -62,7 +62,13 @@ else
   deps += dependency('libedit', required: true)
   cpp_args += ['-DUSE_LIBEDIT=1']
 endif
-
+# Add the new MouseTracker source files to the build
+sources += [
+  'src/MouseTracker.cpp',
+  'src/MouseTracker_mac.cpp',
+  'src/MouseTracker_win.cpp',
+  'src/MouseTracker_linux.cpp',
+]
 if get_option('asan')
   cpp_args += ['-fsanitize=address', '-O1', '-fno-omit-frame-pointer', '-g']
   link_args += ['-fsanitize=address']
