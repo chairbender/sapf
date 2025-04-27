@@ -76,15 +76,9 @@ void MouseTracker::trackMouse() {
 #include <cstdlib>
 
 MouseTracker::MouseTracker()
-    : mMouseX(0.5f),
-      mMouseY(0.5f),
-      mRunning(true),
-      mTrackingEnabled(false)
-{
-    // Start the tracking thread - even if X11 isn't available
-    // the thread will just return early
-    mTrackingThread = std::thread(&MouseTracker::trackMouse, this);
-}
+    : mRunning{true},
+    mTrackingThread(std::thread(&MouseTracker::trackMouse, this))
+{}
 
 MouseTracker::~MouseTracker() {
     mRunning = false;
@@ -95,23 +89,21 @@ MouseTracker::~MouseTracker() {
 
 void MouseTracker::trackMouse() {
     // Try to open X display (should work in X11 or XWayland)
-    Display* display = XOpenDisplay(NULL);
+    const auto display{XOpenDisplay(NULL)};
     if (!display) {
         printf("MouseTracker: Could not open X display, mouse tracking disabled\n");
         return;
     }
     
     // Get screen information
-    int screen = DefaultScreen(display);
-    Window root = RootWindow(display, screen);
-    unsigned int width = DisplayWidth(display, screen);
-    unsigned int height = DisplayHeight(display, screen);
+    const auto screen{DefaultScreen(display)};
+    const auto root{RootWindow(display, screen)};
+    const auto width{DisplayWidth(display, screen)};
+    const auto height{DisplayHeight(display, screen)};
     
     // Calculate reciprocal screen dimensions for normalization
-    float rwidth = 1.0f / static_cast<float>(width);
-    float rheight = 1.0f / static_cast<float>(height);
-    
-    mTrackingEnabled.store(true);
+    const auto rwidth{1.0f / static_cast<float>(width)};
+    const auto rheight{1.0f / static_cast<float>(height)};
     
     // Main tracking loop
     while (mRunning) {
@@ -119,7 +111,7 @@ void MouseTracker::trackMouse() {
         int root_x, root_y, win_x, win_y;
         unsigned int mask_return;
         
-        Bool result = XQueryPointer(
+        const auto result{XQueryPointer(
             display,
             root,
             &root_return,
@@ -127,7 +119,7 @@ void MouseTracker::trackMouse() {
             &root_x, &root_y,
             &win_x, &win_y,
             &mask_return
-        );
+        )};
         
         if (result) {
             mMouseX.store(static_cast<float>(root_x) * rwidth);
@@ -143,7 +135,6 @@ void MouseTracker::trackMouse() {
     XCloseDisplay(display);
 }
 #endif // __linux__
-
 
 #ifdef _WIN32
 #include <windows.h>

@@ -35,5 +35,4 @@ private:
     std::atomic<float> mMouseY{0.5f};
     std::atomic<bool> mRunning{false};
     std::thread mTrackingThread;
-    std::atomic<bool> mTrackingEnabled{false};
 };
