@@ -24,17 +24,16 @@ public:
      */
     float getMouseY() const;
 private:
-
-#ifdef _WIN32
     void trackMouse();
     
+#ifdef _WIN32
     const int mScreenWidth;
     const int mScreenHeight;
     const float mRscreenWidth;
     const float mRscreenHeight; 
-    std::atomic<bool> mRunning{false};
-    std::thread mTrackingThread;
+#endif
     std::atomic<float> mMouseX{0.0f};
     std::atomic<float> mMouseY{0.0f};
-#endif
+    std::atomic<bool> mRunning{false};
+    std::thread mTrackingThread;
 };
