@@ -114,9 +114,22 @@ else
   deps += dependency('sndfile', required: true)
 endif
 
+
+# mouse input handling
+# windows uses native windows libraries
+if host_machine.system() == 'darwin'
+  add_project_arguments('-DSAPF_CARBON', language: ['cpp', 'objcpp'])
+  link_args += ['-framework', 'Carbon']
+elif host_machine.system() == 'linux'
+  deps += dependency('libinput', required: true)
+  deps += dependency('libudev', required: true)
+endif
+
 if get_option('carbon')
   add_project_arguments('-DSAPF_CARBON', language: ['cpp', 'objcpp'])
   link_args += ['-framework', 'Carbon']
+else
+  
 endif
 
 if get_option('cocoa')

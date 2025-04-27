@@ -4,70 +4,56 @@
 #include <Carbon/Carbon.h>
 #include <unistd.h>
 
-class MacMouseTracker : public MouseTracker {
-public:
-    MacMouseTracker() {
-        // Get main display information
-        CGDirectDisplayID display = kCGDirectMainDisplay;
-        CGRect bounds = CGDisplayBounds(display);
+MouseTracker::MouseTracker() {
+    // Get main display information
+    CGDirectDisplayID display = kCGDirectMainDisplay;
+    CGRect bounds = CGDisplayBounds(display);
+    
+    // Calculate reciprocal of screen dimensions for normalization
+    float rscreenWidth = 1.0f / bounds.size.width;
+    float rscreenHeight = 1.0f / bounds.size.height;
+    
+    // Start tracking thread
+    mRunning = true;
+    mTrackingThread = std::thread(&MouseTracker::trackMouse, this);
+}
+
+MouseTracker::~MouseTracker() {
+    mRunning = false;
+    if (mTrackingThread.joinable()) {
+        mTrackingThread.join();
+    }
+}
+
+float MouseTracker::getMouseX() const {
+    return mMouseX.load();
+}
+
+float MouseTracker::getMouseY() const {
+    return mMouseY.load();
+}
+
+void MouseTracker::trackMouse() {
+    // Get main display information
+    CGDirectDisplayID display = kCGDirectMainDisplay;
+    CGRect bounds = CGDisplayBounds(display);
+    
+    // Calculate reciprocal of screen dimensions for normalization
+    float rscreenWidth = 1.0f / bounds.size.width;
+    float rscreenHeight = 1.0f / bounds.size.height;
+    
+    while (mRunning) {
+        HIPoint point;
+        HICoordinateSpace space = kHICoordSpaceScreenPixel;
+        HIGetMousePosition(space, nullptr, &point);
         
-        // Calculate reciprocal of screen dimensions for normalization
-        rscreenWidth_ = 1.0f / bounds.size.width;
-        rscreenHeight_ = 1.0f / bounds.size.height;
+        mMouseX.store(point.x * rscreenWidth);
+        // Convert to bottom-up coordinate system (0 at bottom, 1 at top)
+        mMouseY.store(1.0f - point.y * rscreenHeight);
         
-        // Start tracking thread
-        running_ = true;
-        trackingThread_ = std::thread(&MacMouseTracker::trackMouse, this);
+        usleep(17000); // ~60fps update rate
     }
-    
-    ~MacMouseTracker() override {
-        running_ = false;
-        if (trackingThread_.joinable()) {
-            trackingThread_.join();
-        }
-    }
-    
-    float getMouseX() const override {
-        return mouseX_.load();
-    }
-    
-    float getMouseY() const override {
-        return mouseY_.load();
-    }
-    
-    bool getMouseButton() const override {
-        return mouseButton_.load();
-    }
-    
-private:
-    void trackMouse() {
-        while (running_) {
-            HIPoint point;
-            HICoordinateSpace space = kHICoordSpaceScreenPixel;
-            HIGetMousePosition(space, nullptr, &point);
-            
-            mouseX_.store(point.x * rscreenWidth_);
-            // Convert to bottom-up coordinate system (0 at bottom, 1 at top)
-            mouseY_.store(1.0f - point.y * rscreenHeight_);
-            mouseButton_.store(GetCurrentButtonState());
-            
-            usleep(17000); // ~60fps update rate
-        }
-    }
-    
-    // Helper to check mouse button state
-    bool GetCurrentButtonState() {
-        return CGEventSourceButtonState(kCGEventSourceStateCombinedSessionState, kCGMouseButtonLeft);
-    }
-    
-    std::thread trackingThread_;
-    std::atomic<bool> running_{false};
-    std::atomic<float> mouseX_{0.0f};
-    std::atomic<float> mouseY_{0.0f};
-    std::atomic<bool> mouseButton_{false};
-    float rscreenWidth_;
-    float rscreenHeight_;
-};
+}
 
 #endif // __APPLE__
 
@@ -145,9 +131,9 @@ void MouseTracker::trackMouse() {
     float screenHeight = 1080.0f; // Default screen height
     
     // Attempt to get actual screen dimensions
-    // Note: In a real application, you might want to use X11/Wayland APIs
-    // to retrieve the actual screen dimensions dynamically
-
+    // TODO: attempt to do this for X11 but it won't be possible on
+    //  wayland unless we create a window (or can we at least access it over the parent terminal?)
+    
     // For normalization
     float rscreenWidth = 1.0f / screenWidth;
     float rscreenHeight = 1.0f / screenHeight;
