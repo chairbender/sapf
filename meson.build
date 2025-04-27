@@ -121,8 +121,9 @@ if host_machine.system() == 'darwin'
   add_project_arguments('-DSAPF_CARBON', language: ['cpp', 'objcpp'])
   link_args += ['-framework', 'Carbon']
 elif host_machine.system() == 'linux'
-  deps += dependency('libinput', required: true)
-  deps += dependency('libudev', required: true)
+  # TODO: update deb deps script
+  # X11 for mouse tracking - works in X11 and XWayland, graceful fallback in native Wayland
+  deps += dependency('x11', required: true)
 endif
 
 if get_option('carbon')

@@ -1,12 +1,11 @@
 #pragma once
 
-#ifdef _WIN32
 #include <thread>
-#endif
+#include <atomic>
 
 /**
- * TODO: Convert to non-virtual
  * Cross-platform mouse position tracking.
+ * On Linux, works only with X11 or XWayland, not native Wayland.
  */
 class MouseTracker {
 public:
@@ -32,8 +31,9 @@ private:
     const float mRscreenWidth;
     const float mRscreenHeight; 
 #endif
-    std::atomic<float> mMouseX{0.0f};
-    std::atomic<float> mMouseY{0.0f};
+    std::atomic<float> mMouseX{0.5f};
+    std::atomic<float> mMouseY{0.5f};
     std::atomic<bool> mRunning{false};
     std::thread mTrackingThread;
+    std::atomic<bool> mTrackingEnabled{false};
 };

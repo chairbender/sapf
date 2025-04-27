@@ -1,5 +1,14 @@
 #include "MouseTracker.hpp"
 
+
+float MouseTracker::getMouseX() const {
+    return mMouseX.load();
+}
+
+float MouseTracker::getMouseY() const {
+    return mMouseY.load();
+}
+
 #ifdef __APPLE__
 #include <Carbon/Carbon.h>
 #include <unistd.h>
@@ -58,19 +67,22 @@ void MouseTracker::trackMouse() {
 #endif // __APPLE__
 
 #ifdef __linux__
-#include <libinput.h>
-#include <libudev.h>
-#include <poll.h>
-#include <fcntl.h>
+#include <X11/Xlib.h>
+#include <X11/Xutil.h>
+#include <thread>
+#include <cstdio>
+#include <cstring>
 #include <unistd.h>
-#include <cmath>
+#include <cstdlib>
 
-MouseTracker::MouseTracker() 
-    : mMouseX(0.5f),  // Start at center of screen
+MouseTracker::MouseTracker()
+    : mMouseX(0.5f),
       mMouseY(0.5f),
-      mRunning(true)
+      mRunning(true),
+      mTrackingEnabled(false)
 {
-    // Start the tracking thread
+    // Start the tracking thread - even if X11 isn't available
+    // the thread will just return early
     mTrackingThread = std::thread(&MouseTracker::trackMouse, this);
 }
 
@@ -81,140 +93,54 @@ MouseTracker::~MouseTracker() {
     }
 }
 
-float MouseTracker::getMouseX() const {
-    return mMouseX.load();
-}
-
-float MouseTracker::getMouseY() const {
-    return mMouseY.load();
-}
-
-static int open_restricted(const char *path, int flags, void *user_data) {
-    int fd = open(path, flags);
-    return fd < 0 ? -errno : fd;
-}
-
-static void close_restricted(int fd, void *user_data) {
-    close(fd);
-}
-
 void MouseTracker::trackMouse() {
-    // Initialize libudev context
-    struct udev *udev = udev_new();
-    if (!udev) {
+    // Try to open X display (should work in X11 or XWayland)
+    Display* display = XOpenDisplay(NULL);
+    if (!display) {
+        printf("MouseTracker: Could not open X display, mouse tracking disabled\n");
         return;
     }
-
-    // Setup libinput interface
-    static const struct libinput_interface interface = {
-        .open_restricted = open_restricted,
-        .close_restricted = close_restricted,
-    };
-
-    // Create libinput context
-    struct libinput *li = libinput_udev_create_context(&interface, nullptr, udev);
-    if (!li) {
-        udev_unref(udev);
-        return;
-    }
-
-    // Assign seat to libinput context
-    if (libinput_udev_assign_seat(li, "seat0") != 0) {
-        libinput_unref(li);
-        udev_unref(udev);
-        return;
-    }
-
-    // Get the initial screen dimensions for normalization
-    // Initialize with reasonable defaults
-    float screenWidth = 1920.0f;  // Default screen width
-    float screenHeight = 1080.0f; // Default screen height
     
-    // Attempt to get actual screen dimensions
-    // TODO: attempt to do this for X11 but it won't be possible on
-    //  wayland unless we create a window (or can we at least access it over the parent terminal?)
+    // Get screen information
+    int screen = DefaultScreen(display);
+    Window root = RootWindow(display, screen);
+    unsigned int width = DisplayWidth(display, screen);
+    unsigned int height = DisplayHeight(display, screen);
     
-    // For normalization
-    float rscreenWidth = 1.0f / screenWidth;
-    float rscreenHeight = 1.0f / screenHeight;
-
-    // Track absolute mouse position (we'll convert to normalized coordinates)
-    float absoluteX = screenWidth / 2.0f;
-    float absoluteY = screenHeight / 2.0f;
+    // Calculate reciprocal screen dimensions for normalization
+    float rwidth = 1.0f / static_cast<float>(width);
+    float rheight = 1.0f / static_cast<float>(height);
     
-    // Setup polling
-    struct pollfd fds;
-    fds.fd = libinput_get_fd(li);
-    fds.events = POLLIN;
-    fds.revents = 0;
+    mTrackingEnabled.store(true);
     
-    // Main event loop
+    // Main tracking loop
     while (mRunning) {
-        // Poll for events with a timeout
-        int poll_result = poll(&fds, 1, 17); // ~60fps
-
-        if (poll_result > 0) {
-            libinput_dispatch(li);
-            
-            struct libinput_event *event;
-            while ((event = libinput_get_event(li)) != nullptr) {
-                enum libinput_event_type event_type = libinput_event_get_type(event);
-                
-                if (event_type == LIBINPUT_EVENT_POINTER_MOTION) {
-                    // Handle relative mouse motion
-                    struct libinput_event_pointer *pointer_event = 
-                        libinput_event_get_pointer_event(event);
-                    
-                    double dx = libinput_event_pointer_get_dx(pointer_event);
-                    double dy = libinput_event_pointer_get_dy(pointer_event);
-                    
-                    // Update absolute position with relative motion
-                    absoluteX += dx;
-                    absoluteY += dy;
-                    
-                    // Clamp to screen boundaries
-                    absoluteX = std::max(0.0f, std::min(screenWidth, absoluteX));
-                    absoluteY = std::max(0.0f, std::min(screenHeight, absoluteY));
-                    
-                    // Convert to normalized coordinates (0.0 - 1.0)
-                    mMouseX.store(absoluteX * rscreenWidth);
-                    // Flip Y to have 0 at bottom, 1 at top
-                    mMouseY.store(1.0f - (absoluteY * rscreenHeight));
-                }
-                else if (event_type == LIBINPUT_EVENT_POINTER_MOTION_ABSOLUTE) {
-                    // Handle absolute mouse motion (e.g., from touchscreens)
-                    struct libinput_event_pointer *pointer_event = 
-                        libinput_event_get_pointer_event(event);
-                    
-                    // Get normalized coordinates from libinput (0.0 - 1.0)
-                    double x = libinput_event_pointer_get_absolute_x_transformed(
-                        pointer_event, screenWidth);
-                    double y = libinput_event_pointer_get_absolute_y_transformed(
-                        pointer_event, screenHeight);
-                    
-                    // Update absolute position
-                    absoluteX = x;
-                    absoluteY = y;
-                    
-                    // Store normalized coordinates
-                    mMouseX.store(x * rscreenWidth);
-                    // Flip Y to have 0 at bottom, 1 at top
-                    mMouseY.store(1.0f - (y * rscreenHeight));
-                }
-                
-                libinput_event_destroy(event);
-            }
+        Window root_return, child_return;
+        int root_x, root_y, win_x, win_y;
+        unsigned int mask_return;
+        
+        Bool result = XQueryPointer(
+            display,
+            root,
+            &root_return,
+            &child_return,
+            &root_x, &root_y,
+            &win_x, &win_y,
+            &mask_return
+        );
+        
+        if (result) {
+            mMouseX.store(static_cast<float>(root_x) * rwidth);
+            // Convert to bottom-up coordinate system (0 at bottom, 1 at top)
+            mMouseY.store(1.0f - static_cast<float>(root_y) * rheight);
         }
         
-        if (poll_result == 0) {
-            // Timeout - no events
-            usleep(1000); // Small sleep to avoid busy waiting
-        }
+        // Sleep to prevent high CPU usage
+        usleep(17000); // ~60Hz update rate
     }
     
     // Cleanup
-    libinput_unref(li);
-    udev_unref(udev);
+    XCloseDisplay(display);
 }
 #endif // __linux__
 
@@ -238,14 +164,6 @@ MouseTracker::~MouseTracker() {
     if (mTrackingThread.joinable()) {
         mTrackingThread.join();
     }
-}
-
-float MouseTracker::getMouseX() const {
-    return mMouseX.load();
-}
-
-float MouseTracker::getMouseY() const {
-    return mMouseY.load();
 }
 
 void MouseTracker::trackMouse() {
