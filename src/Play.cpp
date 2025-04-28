@@ -418,6 +418,11 @@ static bool fillBufferList(Player *player, int inNumberFrames, Buffers *buffers)
 				post("exception in real time. stopping player.\n");
 				done = true;
 				goto zeroAll;
+			} catch (const std::exception& e) {
+				post("\nException: %s\n", e.what());
+				post("exception in real time. stopping player.\n");
+				done = true;
+				goto zeroAll;
 			} catch (...) {
 				post("\nunknown error\n");
 				post("exception in real time. stopping player.\n");

@@ -425,6 +425,8 @@ void Thread::repl(FILE* infile, const char* inLogfilename)
 			}
 		} catch (std::bad_alloc& xerr) {
 			post("\nnot enough memory\n");
+		} catch (const std::exception& e) {
+			post("\nException: %s\n", e.what());
 		} catch (...) {
 			post("\nunknown error\n");
 		}
@@ -453,6 +455,8 @@ void Thread::repl(FILE* infile, const char* inLogfilename)
 			}
 		} catch (std::bad_alloc& xerr) {
 			post("not enough memory\n");
+		} catch (const std::exception& e) {
+			post("\nException: %s\n", e.what());
 		} catch (...) {
 			post("unknown error\n");
 		}
@@ -522,6 +526,8 @@ void loadFile(Thread& th, const char* filename)
 		}
 	} catch (std::bad_alloc& xerr) {
 		post("not enough memory\n");
+	} catch (const std::exception& e) {
+		post("\nException: %s\n", e.what());
 	} catch (...) {
 		post("unknown error\n");
 	}
