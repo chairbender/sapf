@@ -39,6 +39,9 @@ sources = [
   'src/ZArr.cpp',
   'src/Buffers.cpp',
   'src/AsyncAudioFileWriter.cpp',
+  'src/PortableMidiPacket.cpp',
+  'src/PortableMidiClient.cpp',
+  'src/MouseTracker.cpp',
 ]
 deps = []
 cpp_args = ['-std=c++17']
@@ -111,18 +114,34 @@ else
   deps += dependency('sndfile', required: true)
 endif
 
+
+# mouse input handling
+# windows uses native windows libraries
+if host_machine.system() == 'darwin'
+  add_project_arguments('-DSAPF_CARBON', language: ['cpp', 'objcpp'])
+  link_args += ['-framework', 'Carbon']
+elif host_machine.system() == 'linux'
+  # TODO: update deb deps script
+  # X11 for mouse tracking - works in X11 and XWayland, graceful fallback in native Wayland
+  deps += dependency('x11', required: true)
+endif
+
 if get_option('carbon')
   add_project_arguments('-DSAPF_CARBON', language: ['cpp', 'objcpp'])
   link_args += ['-framework', 'Carbon']
+else
+  
 endif
 
 if get_option('cocoa')
-  add_project_arguments('-DSAPF_COCOA', '-std=c++17', language: ['cpp', 'objcpp'])
-  sources += ['src/makeImage.mm']
+  add_project_arguments('-DSAPF_COCOA', language: ['cpp', 'objcpp'])
   add_languages('objcpp', required : true)
   link_args += ['-framework', 'Cocoa']
+  sources += ['src/makeImage.mm']
 else
-  sources += 'src/makeImage.cpp'
+  deps += dependency('libturbojpeg', required: true)
+  deps += dependency('libjpeg', required: true)
+  sources += ['src/makeImage.cpp']
 endif
 
 if get_option('corefoundation')
@@ -133,6 +152,8 @@ endif
 if get_option('coremidi')
   add_project_arguments('-DSAPF_COREMIDI', language: ['cpp', 'objcpp'])
   link_args += ['-framework', 'CoreMIDI']
+else
+  deps += dependency('rtmidi', required: true) 
 endif
 
 if get_option('dispatch')
@@ -239,7 +260,14 @@ test_sources = sources + [
   'test/test_MathOps.cpp',
   'test/test_AsyncAudioFileWriter.cpp',
   'test/test_SndfileSoundFile.cpp',
+  'test/test_Midi.cpp',
+  'test/test_Spectrogram.cpp',
 ]
+if get_option('cocoa')
+  test_sources += ['test/ImageHelpers.mm']
+else
+  test_sources += ['test/ImageHelpers.cpp']
+endif
 test_includes = [include_directories('include'), include_directories('test/helpers')]
 test_cpp_args = cpp_args + '-DTEST_BUILD'
 

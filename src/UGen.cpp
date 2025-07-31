@@ -4306,36 +4306,10 @@ static void ifold_(Thread& th, Prim* prim)
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-#ifdef SAPF_CARBON
-#include <Carbon/Carbon.h>
+#include "MouseTracker.hpp"
 
-struct MouseUGenGlobalState {
-	float mouseX, mouseY;
-	bool mouseButton;
-} gMouseUGenGlobals;
 
-static void* gstate_update_func(void* arg)
-{
-	MouseUGenGlobalState* gstate = &gMouseUGenGlobals;
-
-	CGDirectDisplayID display = kCGDirectMainDisplay; // to grab the main display ID
-	CGRect bounds = CGDisplayBounds(display);
-	float rscreenWidth = 1. / bounds.size.width;
-	float rscreenHeight = 1. / bounds.size.height;
-	for (;;) {
-		HIPoint point;
-		HICoordinateSpace space = 2;
-		HIGetMousePosition(space, nullptr, &point);
-
-		gstate->mouseX = point.x * rscreenWidth; //(float)p.h * rscreenWidth;
-		gstate->mouseY = 1. - point.y * rscreenHeight; //(float)p.v * rscreenHeight;
-		gstate->mouseButton = GetCurrentButtonState();
-		usleep(17000);
-	}
-
-	return 0;
-}
-
+MouseTracker gMouseTracker{};
 Z gMouseLagTime = .1;
 Z gMouseLagMul = log001 / gMouseLagTime;
 
@@ -4355,12 +4329,12 @@ struct MouseX : public TwoInputUGen<MouseX>
 	{
 		if (_once) {
 			_once = false;
-			_y1 = *lo + gMouseUGenGlobals.mouseX * (*hi - *lo);
+			_y1 = *lo + gMouseTracker.getMouseX() * (*hi - *lo);
 		}
 		Z y1 = _y1;
 		Z b1 = _b1;
 		for (int i = 0; i < n; ++i) {
-			Z y0 = *lo + gMouseUGenGlobals.mouseX * (*hi - *lo);
+			Z y0 = *lo + gMouseTracker.getMouseX() * (*hi - *lo);
 			out[i] = y1 = y0 + b1 * (y1 - y0);
 			lo += loStride;
 			hi += hiStride;
@@ -4385,12 +4359,12 @@ struct MouseY : public TwoInputUGen<MouseY>
 	{
 		if (_once) {
 			_once = false;
-			_y1 = *lo + gMouseUGenGlobals.mouseY * (*hi - *lo);
+			_y1 = *lo + gMouseTracker.getMouseY() * (*hi - *lo);
 		}
 		Z y1 = _y1;
 		Z b1 = _b1;
 		for (int i = 0; i < n; ++i) {
-			Z y0 = *lo + gMouseUGenGlobals.mouseY * (*hi - *lo);
+			Z y0 = *lo + gMouseTracker.getMouseY() * (*hi - *lo);
 			out[i] = y1 = y0 + b1 * (y1 - y0);
 			lo += loStride;
 			hi += hiStride;
@@ -4415,12 +4389,12 @@ struct ExpMouseX : public TwoInputUGen<ExpMouseX>
 	{
 		if (_once) {
 			_once = false;
-			_y1 = *lo * pow(*hi / *lo, gMouseUGenGlobals.mouseX);
+			_y1 = *lo * pow(*hi / *lo, gMouseTracker.getMouseX());
 		}
 		Z y1 = _y1;
 		Z b1 = _b1;
 		for (int i = 0; i < n; ++i) {
-			Z y0 = *lo * pow(*hi / *lo, gMouseUGenGlobals.mouseX);
+			Z y0 = *lo * pow(*hi / *lo, gMouseTracker.getMouseX());
 			out[i] = y1 = y0 + b1 * (y1 - y0);
 			lo += loStride;
 			hi += hiStride;
@@ -4445,12 +4419,12 @@ struct ExpMouseY : public TwoInputUGen<ExpMouseY>
 	{
 		if (_once) {
 			_once = false;
-			_y1 = *lo * pow(*hi / *lo, gMouseUGenGlobals.mouseY);
+			_y1 = *lo * pow(*hi / *lo, gMouseTracker.getMouseY());
 		}
 		Z y1 = _y1;
 		Z b1 = _b1;
 		for (int i = 0; i < n; ++i) {
-			Z y0 = *lo * pow(*hi / *lo, gMouseUGenGlobals.mouseY);
+			Z y0 = *lo * pow(*hi / *lo, gMouseTracker.getMouseY());
 			out[i] = y1 = y0 + b1 * (y1 - y0);
 			lo += loStride;
 			hi += hiStride;
@@ -4496,7 +4470,7 @@ static void mousex1_(Thread& th, Prim* prim)
 	Z hi   = th.popFloat("mousex1 : hi");
 	Z lo   = th.popFloat("mousex1 : lo");
 	
-	Z z = lo + gMouseUGenGlobals.mouseX * (hi - lo);
+	Z z = lo + gMouseTracker.getMouseX() * (hi - lo);
 	th.push(z);
 }
 
@@ -4505,7 +4479,7 @@ static void mousey1_(Thread& th, Prim* prim)
 	Z hi   = th.popFloat("mousey1 : hi");
 	Z lo   = th.popFloat("mousey1 : lo");
 	
-	Z z = lo + gMouseUGenGlobals.mouseY * (hi - lo);
+	Z z = lo + gMouseTracker.getMouseY() * (hi - lo);
 	th.push(z);
 }
 
@@ -4514,7 +4488,7 @@ static void xmousex1_(Thread& th, Prim* prim)
 	Z hi   = th.popFloat("xmousex1 : hi");
 	Z lo   = th.popFloat("xmousex1 : lo");
 	
-	Z z = lo * pow(hi / lo, gMouseUGenGlobals.mouseX);
+	Z z = lo * pow(hi / lo, gMouseTracker.getMouseX());
 	th.push(z);
 }
 
@@ -4523,12 +4497,9 @@ static void xmousey1_(Thread& th, Prim* prim)
 	Z hi   = th.popFloat("xmousey1 : hi");
 	Z lo   = th.popFloat("xmousey1 : lo");
 	
-	Z z = lo * pow(hi / lo, gMouseUGenGlobals.mouseY);
+	Z z = lo * pow(hi / lo, gMouseTracker.getMouseY());
 	th.push(z);
 }
-#else
-// TODO
-#endif // SAPF_CARBON
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
@@ -4549,13 +4520,6 @@ void AddUGenOps()
 	s_dt = getsym("dt");
 	s_out = getsym("out");
 
-#ifdef SAPF_CARBON
-	pthread_t mouseListenThread;
-	pthread_create (&mouseListenThread, nullptr, gstate_update_func, (void*)0);
-#else
-        // TODO
-#endif
-        
 	vm.addBifHelp("\n*** unit generators ***");
 	vm.defmcx("*+", 3, madd_, "(a b c --> out) multiply add. a b * c +");
 
@@ -4669,7 +4633,6 @@ void AddUGenOps()
 	DEFMCX(iwrap, 3, "(in lo hi --> out) constrain the input to the bounds by wrapping. all inputs treated as integers.")
 	DEFMCX(ifold, 3, "(in lo hi --> out) constrain the input to the bounds by folding at the edges. all inputs treated as integers.")
 
-#ifdef SAPF_CARBON
 	vm.addBifHelp("\n*** mouse control unit generators ***");
 	DEFMCX(mousex, 2, "(lo hi --> out) returns a signal of the X coordinate of the mouse mapped to the linear range lo to hi.");
 	DEFMCX(mousey, 2, "(lo hi --> out) returns a signal of the Y coordinate of the mouse mapped to the linear range lo to hi.");
@@ -4680,7 +4643,4 @@ void AddUGenOps()
 	DEFMCX(mousey1, 2, "(lo hi --> out) returns the current value of the Y coordinate of the mouse mapped to the linear range lo to hi.");
 	DEFMCX(xmousex1, 2, "(lo hi --> out) returns the current value of the X coordinate of the mouse mapped to the exponential range lo to hi.");
 	DEFMCX(xmousey1, 2, "(lo hi --> out) returns the current value of the Y coordinate of the mouse mapped to the exponential range lo to hi.");
-#else
-        // TODO
-#endif SAPF_CARBON
 }
